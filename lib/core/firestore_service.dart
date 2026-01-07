@@ -24,5 +24,8 @@ class FirestoreService {
     return _vehiclesRef.add(vehicle);
   }
 
-  // (Gelecekte buraya aracı silme, güncelleme gibi metotlar da eklenebilir)
+  // Aracı ID'sine göre silme
+  Future<void> deleteVehicle(String vehicleId) {
+    return _vehiclesRef.doc(vehicleId).delete();
+  }
 }

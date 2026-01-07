@@ -12,7 +12,7 @@ class AppState extends ChangeNotifier {
   String _city = 'Tümü';
   bool _showCars = true;
   String _searchTerm = '';
-  int _pageIndex = 0; // YENİ: Aktif sayfa indeksi
+  int _pageIndex = 0;
 
   AppState() {
     _listenToVehicles();
@@ -23,7 +23,7 @@ class AppState extends ChangeNotifier {
   bool get showCars => _showCars;
   String get searchTerm => _searchTerm;
   List<Vehicle> get allVehicles => _allVehicles;
-  int get pageIndex => _pageIndex; // YENİ
+  int get pageIndex => _pageIndex;
 
   List<Vehicle> get filteredVehicles {
     return _allVehicles.where((v) {
@@ -45,6 +45,12 @@ class AppState extends ChangeNotifier {
     await _firestoreService.addVehicle(vehicle);
   }
 
+  // YENİ: Silme metodu
+  Future<void> deleteVehicle(String vehicleId) async {
+    await _firestoreService.deleteVehicle(vehicleId);
+    // Dinleyici sayesinde arayüz otomatik güncellenecek
+  }
+
   // Setter'lar
   void setCity(String value) {
     _city = value;
@@ -61,7 +67,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setPageIndex(int index) { // YENİ
+  void setPageIndex(int index) {
     _pageIndex = index;
     notifyListeners();
   }

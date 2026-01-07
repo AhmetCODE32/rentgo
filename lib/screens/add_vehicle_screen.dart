@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:rentgo/core/storage_service.dart';
 import '../core/app_state.dart';
 import '../models/vehicle.dart';
 
@@ -18,12 +19,14 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   bool isCar = true;
   String selectedCity = 'Kilis';
   bool _isLoading = false;
+  String _loadingText = '';
 
   final titleController = TextEditingController();
   final priceController = TextEditingController();
 
   final ImagePicker picker = ImagePicker();
-  final List<File> images = []; // Resimler hala dosya olarak seçiliyor, yükleme sonraki adım
+  final List<File> images = [];
+  final StorageService _storageService = StorageService();
 
   Future<void> _addVehicle() async {
     final user = Provider.of<User?>(context, listen: false);
@@ -34,33 +37,46 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       return;
     }
 
-    if (titleController.text.isEmpty || priceController.text.isEmpty) {
+    if (images.isEmpty || titleController.text.isEmpty || priceController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen boş alan bırakmayın!')),
+        const SnackBar(content: Text('Lütfen tüm alanları ve en az bir fotoğrafı doldurun.')),
       );
       return;
     }
 
-    setState(() => _isLoading = true);
-
-    final newVehicle = Vehicle(
-      userId: user.uid,
-      title: titleController.text,
-      city: selectedCity,
-      price: "${priceController.text}₺ / gün",
-      isCar: isCar,
-      images: [], // Şimdilik boş, resim yükleme sonraki adım
-    );
+    setState(() {
+      _isLoading = true;
+      _loadingText = 'Resimler yükleniyor...';
+    });
 
     try {
+      List<String> imageUrls = [];
+      for (int i = 0; i < images.length; i++) {
+        setState(() {
+          _loadingText = '${i + 1}/${images.length} resim yükleniyor...';
+        });
+        final imageUrl = await _storageService.uploadImage(images[i]);
+        imageUrls.add(imageUrl);
+      }
+
+      setState(() => _loadingText = 'İlan oluşturuluyor...');
+
+      final newVehicle = Vehicle(
+        userId: user.uid,
+        title: titleController.text,
+        city: selectedCity,
+        price: "${priceController.text}₺ / gün",
+        isCar: isCar,
+        images: imageUrls,
+      );
+
       await context.read<AppState>().addVehicle(newVehicle);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('İlanınız başarıyla yayınlandı!')),
         );
-        // HATALI KOMUT DEĞİŞTİRİLDİ: Ana ekrana (0. index) git
-        context.read<AppState>().setPageIndex(0);
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -71,12 +87,19 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     }
 
     if (mounted) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _loadingText = '';
+      });
     }
   }
 
+  // RESİM SEÇME OPTİMİZASYONU
   Future<void> pickImages() async {
-    final picked = await picker.pickMultiImage(imageQuality: 70);
+    final picked = await picker.pickMultiImage(
+      imageQuality: 80, // Kaliteyi %80'e ayarla
+      maxWidth: 1080,   // Maksimum genişliği 1080px yap
+    );
 
     if (picked.isNotEmpty) {
       setState(() {
@@ -109,7 +132,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ... (diğer widget'lar aynı kaldı) ...
+             // ... (diğer widget'lar aynı kaldı) ...
             Row(
               children: [
                 Expanded(
@@ -263,7 +286,14 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 ),
                 onPressed: _isLoading ? null : _addVehicle,
                 child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(color: Colors.white),
+                          const SizedBox(width: 16),
+                          Text(_loadingText, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                        ],
+                      )
                     : const Text('İlanı Yayınla', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ),
@@ -273,8 +303,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     );
   }
 }
-
-// ... (diğer yardımcı widget'lar aynı kaldı) ...
 
 class _TypeCard extends StatelessWidget {
   final String label;
@@ -340,7 +368,7 @@ class _Input extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      inputFormatters: inputFormatters, // Eklendi
+      inputFormatters: inputFormatters,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,

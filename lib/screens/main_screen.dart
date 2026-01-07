@@ -8,16 +8,13 @@ import 'profile_screen.dart';
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
 
-  // EKRANLARI GÖSTERMEK İÇİN KULLANILACAK WIDGET LİSTESİ
   static const List<Widget> _widgetOptions = <Widget>[
     HomeScreen(),
-    AddVehicleScreen(),
     ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    // Merkezi AppState'den sayfa indeksini dinle
     final appState = context.watch<AppState>();
 
     return Scaffold(
@@ -25,27 +22,54 @@ class MainScreen extends StatelessWidget {
         index: appState.pageIndex,
         children: _widgetOptions,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: appState.pageIndex,
-        // Butona basıldığında AppState'i güncelle
-        onTap: (index) => context.read<AppState>().setPageIndex(index),
-        backgroundColor: const Color(0xFF020617),
-        selectedItemColor: Colors.blueAccent,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.directions_car),
-            label: 'Araçlar',
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddVehicleScreen()),
+          );
+        },
+        backgroundColor: Colors.blueAccent,
+        child: const Icon(Icons.add, color: Colors.white),
+        shape: const CircleBorder(),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8.0,
+        color: const Color(0xFF020617),
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: <Widget>[
+              _buildNavItem(context, icon: Icons.directions_car, label: 'Araçlar', index: 0),
+              const SizedBox(width: 48), // Ortadaki boşluk
+              _buildNavItem(context, icon: Icons.person, label: 'Profil', index: 1),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            label: 'Ekle',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profil',
-          ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(BuildContext context, {required IconData icon, required String label, required int index}) {
+    final appState = context.watch<AppState>();
+    final isSelected = appState.pageIndex == index;
+    return Expanded(
+      child: InkWell(
+        onTap: () => context.read<AppState>().setPageIndex(index),
+        borderRadius: BorderRadius.circular(20),
+        // HATAYI ÇÖZMEK İÇİN YAPI DEĞİŞTİRİLDİ
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, // Dikeyde ortala
+          children: [
+            Icon(icon, color: isSelected ? Colors.blueAccent : Colors.grey),
+            const SizedBox(height: 4), // İkon ve yazı arası boşluk
+            Text(label, style: TextStyle(color: isSelected ? Colors.blueAccent : Colors.grey, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }
