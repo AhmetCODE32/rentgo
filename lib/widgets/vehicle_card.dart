@@ -26,7 +26,7 @@ class VehicleCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: Colors.blueAccent.withOpacity(0.2),
+                backgroundColor: Colors.blueAccent.withValues(alpha: 0.2),
                 child: Icon(
                   vehicle.isCar
                       ? Icons.directions_car

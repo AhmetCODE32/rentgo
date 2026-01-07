@@ -20,8 +20,8 @@ class VehicleDetailScreen extends StatelessWidget {
                 _PhotoBox(icon: vehicle.isCar
                     ? Icons.directions_car
                     : Icons.motorcycle),
-                _PhotoBox(icon: Icons.image),
-                _PhotoBox(icon: Icons.image_outlined),
+                const _PhotoBox(icon: Icons.image),
+                const _PhotoBox(icon: Icons.image_outlined),
               ],
             ),
           ),
@@ -59,7 +59,7 @@ class VehicleDetailScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blueAccent.withOpacity(0.15),
+                      color: Colors.blueAccent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
@@ -111,7 +111,6 @@ class VehicleDetailScreen extends StatelessWidget {
 
 class _PhotoBox extends StatelessWidget {
   final IconData icon;
-
   const _PhotoBox({required this.icon});
 
   @override
@@ -119,7 +118,7 @@ class _PhotoBox extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blueAccent.withOpacity(0.15),
+        color: Colors.blueAccent.withValues(alpha: 0.15), // Güncellendi
         borderRadius: BorderRadius.circular(20),
       ),
       child: Center(

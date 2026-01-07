@@ -18,17 +18,17 @@ class ProfileScreen extends StatelessWidget {
                 color: const Color(0xFF020617),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.blueAccent,
                     child: Icon(Icons.person, size: 34),
                   ),
-                  const SizedBox(width: 16),
-                  Column(
+                  SizedBox(width: 16),
+                  Column( // Şemsiyeyi buraya kurduk
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [ // BURADA ASLA CONST OLMAYACAK!
                       Text(
                         'Kullanıcı Adı',
                         style: TextStyle(
@@ -49,19 +49,19 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // MENÜ
-            _ProfileTile(
+            const _ProfileTile(
               icon: Icons.directions_car,
               title: 'İlanlarım',
             ),
-            _ProfileTile(
+            const _ProfileTile(
               icon: Icons.favorite,
               title: 'Favoriler',
             ),
-            _ProfileTile(
+            const _ProfileTile(
               icon: Icons.settings,
               title: 'Ayarlar',
             ),
-            _ProfileTile(
+            const _ProfileTile(
               icon: Icons.logout,
               title: 'Çıkış Yap',
             ),

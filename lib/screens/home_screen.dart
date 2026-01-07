@@ -147,7 +147,7 @@ class _CategoryChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? Colors.blueAccent
-              : Colors.blueAccent.withOpacity(0.15),
+              : Colors.blueAccent.withValues(alpha: 0.15), // Burayı değiştirdik
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -160,7 +160,7 @@ class _CategoryChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
+              style: TextStyle( // Buradaki const uyarısı verirse başına ekleyebilirsin
                 color: Colors.white,
                 fontWeight:
                 selected ? FontWeight.bold : FontWeight.normal,
