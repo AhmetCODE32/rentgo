@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../models/vehicle.dart';
 import '../screens/vehicle_detail_screen.dart';
@@ -9,6 +11,29 @@ class VehicleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fotoğrafı gösterecek widget
+    Widget imageWidget;
+    if (vehicle.images != null && vehicle.images!.isNotEmpty) {
+      imageWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.file(
+          vehicle.images!.first,
+          width: 56,
+          height: 56,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else {
+      imageWidget = CircleAvatar(
+        radius: 28,
+        backgroundColor: Colors.blueAccent.withOpacity(0.2),
+        child: Icon(
+          vehicle.isCar ? Icons.directions_car : Icons.motorcycle,
+          color: Colors.blueAccent,
+        ),
+      );
+    }
+
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -24,16 +49,7 @@ class VehicleCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: Colors.blueAccent.withValues(alpha: 0.2),
-                child: Icon(
-                  vehicle.isCar
-                      ? Icons.directions_car
-                      : Icons.motorcycle,
-                  color: Colors.blueAccent,
-                ),
-              ),
+              imageWidget, // Avatar yerine resim veya icon
               const SizedBox(width: 16),
               Expanded(
                 child: Column(

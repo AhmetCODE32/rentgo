@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/vehicle.dart';
 
 class AppState extends ChangeNotifier {
-  String _city = 'Gaziantep';
+  String _city = 'Tümü';
   final List<Vehicle> _allVehicles = [
     Vehicle(title: 'BMW 320i', city: 'Gaziantep', price: '1200₺ / gün', isCar: true),
     Vehicle(title: 'Yamaha R25', city: 'Kilis', price: '600₺ / gün', isCar: false),

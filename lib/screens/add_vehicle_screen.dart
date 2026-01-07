@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../core/app_state.dart';
@@ -202,6 +203,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               hint: 'Fiyat (Örn: 1200)',
               icon: Icons.sell,
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
 
             const SizedBox(height: 40),
@@ -223,7 +225,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                     );
                     return;
                   }
-                  
+
                   if (titleController.text.isEmpty || priceController.text.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Lütfen boş alan bırakmayın!')),
@@ -241,7 +243,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   );
 
                   // 2. AppState (Provider) üzerinden listeye ekle
-                  // Not: AppState içinde addVehicle metodunun olduğundan emin olun.
                   Provider.of<AppState>(context, listen: false).addVehicle(newVehicle);
 
                   // 3. Başarılı Mesajı ve Geri Dönüş
@@ -249,10 +250,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                     const SnackBar(content: Text('İlanınız başarıyla yayınlandı!')),
                   );
 
-                  // Siyah ekranı önlemek için kontrol ederek geri dön
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  }
+                  // Hatayı önlemek için sayfadan çıkmayı küçük bir gecikmeyle yap
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                  });
                 },
                 child: const Text('İlanı Yayınla', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
@@ -285,10 +288,18 @@ class _TypeCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: selected ? Colors.blueAccent : const Color(0xFF020617),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.blueAccent, width: 2),
-        ),
+            color: selected ? Colors.blueAccent : const Color(0xFF020617),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.blueAccent, width: 2),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.blueAccent.withOpacity(0.5),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                    )
+                  ]
+                : []), // Gölge efekti
         child: Column(
           children: [
             Icon(icon, color: Colors.white, size: 28),
@@ -307,12 +318,14 @@ class _Input extends StatelessWidget {
   final String hint;
   final TextInputType keyboardType;
   final IconData icon;
+  final List<TextInputFormatter>? inputFormatters;
 
   const _Input({
     required this.controller,
     required this.hint,
     this.keyboardType = TextInputType.text,
     required this.icon,
+    this.inputFormatters,
   });
 
   @override
@@ -320,6 +333,7 @@ class _Input extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters, // Eklendi
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,

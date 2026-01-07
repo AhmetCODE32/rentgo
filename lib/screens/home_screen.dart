@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../core/app_state.dart';
 import '../models/vehicle.dart';
 import '../widgets/vehicle_card.dart';
 
@@ -10,45 +12,24 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final _searchController = TextEditingController();
   bool showCars = true;
-  String selectedCity = 'Tümü';
 
-  final List<Vehicle> allVehicles = [
-    Vehicle(
-      title: 'BMW 320i',
-      city: 'Gaziantep',
-      price: '1200₺ / gün',
-      isCar: true,
-    ),
-    Vehicle(
-      title: 'Mercedes C200',
-      city: 'Gaziantep',
-      price: '1500₺ / gün',
-      isCar: true,
-    ),
-    Vehicle(
-      title: 'Yamaha R25',
-      city: 'Kilis',
-      price: '600₺ / gün',
-      isCar: false,
-    ),
-    Vehicle(
-      title: 'Honda CBR',
-      city: 'Kilis',
-      price: '750₺ / gün',
-      isCar: false,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Arama alanındaki her değişikliği dinle ve arayüzü güncelle
+    _searchController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final vehicles = allVehicles.where((v) {
-      final typeMatch = v.isCar == showCars;
-      final cityMatch =
-          selectedCity == 'Tümü' || v.city == selectedCity;
-      return typeMatch && cityMatch;
-    }).toList();
-
     return Scaffold(
       appBar: AppBar(title: const Text('RentGo')),
       body: Column(
@@ -57,63 +38,90 @@ class _HomeScreenState extends State<HomeScreen> {
           // HERO
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0), // Alt padding kaldırıldı
             color: const Color(0xFF020617),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Araç Kirala / Satın Al',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
-                SizedBox(height: 6),
-                Text(
+                const SizedBox(height: 6),
+                const Text(
                   'Kilis & Gaziantep',
                   style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                // ARAMA ALANI
+                _SearchInput(
+                  controller: _searchController,
+                  hint: 'Marka veya model ara...',
                 ),
               ],
             ),
           ),
 
           // KATEGORİ + ŞEHİR
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Row(
-              children: [
-                _CategoryChip(
-                  icon: Icons.directions_car,
-                  label: 'Arabalar',
-                  selected: showCars,
-                  onTap: () => setState(() => showCars = true),
+          Consumer<AppState>(
+            builder: (context, appState, child) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Row(
+                  children: [
+                    _CategoryChip(
+                      icon: Icons.directions_car,
+                      label: 'Arabalar',
+                      selected: showCars,
+                      onTap: () => setState(() => showCars = true),
+                    ),
+                    const SizedBox(width: 10),
+                    _CategoryChip(
+                      icon: Icons.motorcycle,
+                      label: 'Motorlar',
+                      selected: !showCars,
+                      onTap: () => setState(() => showCars = false),
+                    ),
+                    const Spacer(),
+                    _CityDropdown(
+                      value: appState.city,
+                      onChanged: (v) => appState.setCity(v),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                _CategoryChip(
-                  icon: Icons.motorcycle,
-                  label: 'Motorlar',
-                  selected: !showCars,
-                  onTap: () => setState(() => showCars = false),
-                ),
-                const Spacer(),
-                _CityDropdown(
-                  value: selectedCity,
-                  onChanged: (v) {
-                    setState(() => selectedCity = v);
-                  },
-                ),
-              ],
-            ),
+              );
+            },
           ),
 
           // LİSTE
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: vehicles.length,
-              itemBuilder: (context, i) {
-                return VehicleCard(vehicle: vehicles[i]);
+            child: Consumer<AppState>(
+              builder: (context, appState, child) {
+                final searchTerm = _searchController.text.toLowerCase();
+                final vehicles = appState.allVehicles.where((v) {
+                  final typeMatch = v.isCar == showCars;
+                  final cityMatch = appState.city == 'Tümü' || v.city == appState.city;
+                  final searchMatch = searchTerm.isEmpty || v.title.toLowerCase().contains(searchTerm);
+                  return typeMatch && cityMatch && searchMatch;
+                }).toList();
+
+                // Eğer filtrelenen araç listesi boş ise mesaj göster
+                if (vehicles.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'Bu kriterlere uygun ilan bulunamadı.',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: vehicles.length,
+                  itemBuilder: (context, i) {
+                    return VehicleCard(vehicle: vehicles[i]);
+                  },
+                );
               },
             ),
           ),
@@ -124,6 +132,42 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ---------- WIDGETS ----------
+
+// ARAMA GİRİŞİ
+class _SearchInput extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+
+  const _SearchInput({required this.controller, required this.hint});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.grey),
+        prefixIcon: const Icon(Icons.search, color: Colors.blueAccent),
+        filled: true,
+        fillColor: const Color(0xFF0F172A), // Arka plan rengiyle aynı
+        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.white24),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.white24),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
+        ),
+      ),
+    );
+  }
+}
 
 class _CategoryChip extends StatelessWidget {
   final IconData icon;
@@ -147,7 +191,7 @@ class _CategoryChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? Colors.blueAccent
-              : Colors.blueAccent.withValues(alpha: 0.15), // Burayı değiştirdik
+              : Colors.blueAccent.withOpacity(0.15),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -160,10 +204,9 @@ class _CategoryChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle( // Buradaki const uyarısı verirse başına ekleyebilirsin
+              style: TextStyle(
                 color: Colors.white,
-                fontWeight:
-                selected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ],
