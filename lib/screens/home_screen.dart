@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_state.dart';
-import '../models/vehicle.dart';
 import '../widgets/vehicle_card.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -12,14 +11,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _searchController = TextEditingController();
-  bool showCars = true;
+  late final TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
-    // Arama alanındaki her değişikliği dinle ve arayüzü güncelle
-    _searchController.addListener(() => setState(() {}));
+    // AppState'e erişim (dinleme olmadan)
+    final appState = context.read<AppState>();
+    _searchController = TextEditingController(text: appState.searchTerm);
+
+    // Arama alanındaki her değişikliği AppState'e bildir
+    _searchController.addListener(() {
+      appState.setSearchTerm(_searchController.text);
+    });
   }
 
   @override
@@ -30,15 +34,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Değişiklikleri dinlemek için AppState'e eriş
+    final appState = context.watch<AppState>();
+
     return Scaffold(
       appBar: AppBar(title: const Text('RentGo')),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // HERO
+          // HERO & ARAMA
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0), // Alt padding kaldırıldı
+            padding: const EdgeInsets.all(20),
             color: const Color(0xFF020617),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 16),
-                // ARAMA ALANI
                 _SearchInput(
                   controller: _searchController,
                   hint: 'Marka veya model ara...',
@@ -63,49 +69,38 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           // KATEGORİ + ŞEHİR
-          Consumer<AppState>(
-            builder: (context, appState, child) {
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Row(
-                  children: [
-                    _CategoryChip(
-                      icon: Icons.directions_car,
-                      label: 'Arabalar',
-                      selected: showCars,
-                      onTap: () => setState(() => showCars = true),
-                    ),
-                    const SizedBox(width: 10),
-                    _CategoryChip(
-                      icon: Icons.motorcycle,
-                      label: 'Motorlar',
-                      selected: !showCars,
-                      onTap: () => setState(() => showCars = false),
-                    ),
-                    const Spacer(),
-                    _CityDropdown(
-                      value: appState.city,
-                      onChanged: (v) => appState.setCity(v),
-                    ),
-                  ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Row(
+              children: [
+                _CategoryChip(
+                  icon: Icons.directions_car,
+                  label: 'Arabalar',
+                  selected: appState.showCars, // AppState'den al
+                  onTap: () => appState.setShowCars(true), // AppState'i güncelle
                 ),
-              );
-            },
+                const SizedBox(width: 10),
+                _CategoryChip(
+                  icon: Icons.motorcycle,
+                  label: 'Motorlar',
+                  selected: !appState.showCars, // AppState'den al
+                  onTap: () => appState.setShowCars(false), // AppState'i güncelle
+                ),
+                const Spacer(),
+                _CityDropdown(
+                  value: appState.city,
+                  onChanged: (v) => appState.setCity(v),
+                ),
+              ],
+            ),
           ),
 
           // LİSTE
           Expanded(
             child: Consumer<AppState>(
               builder: (context, appState, child) {
-                final searchTerm = _searchController.text.toLowerCase();
-                final vehicles = appState.allVehicles.where((v) {
-                  final typeMatch = v.isCar == showCars;
-                  final cityMatch = appState.city == 'Tümü' || v.city == appState.city;
-                  final searchMatch = searchTerm.isEmpty || v.title.toLowerCase().contains(searchTerm);
-                  return typeMatch && cityMatch && searchMatch;
-                }).toList();
+                final vehicles = appState.filteredVehicles; // Filtrelenmiş listeyi al
 
-                // Eğer filtrelenen araç listesi boş ise mesaj göster
                 if (vehicles.isEmpty) {
                   return const Center(
                     child: Text(
@@ -133,7 +128,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // ---------- WIDGETS ----------
 
-// ARAMA GİRİŞİ
 class _SearchInput extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
@@ -150,7 +144,7 @@ class _SearchInput extends StatelessWidget {
         hintStyle: const TextStyle(color: Colors.grey),
         prefixIcon: const Icon(Icons.search, color: Colors.blueAccent),
         filled: true,
-        fillColor: const Color(0xFF0F172A), // Arka plan rengiyle aynı
+        fillColor: const Color(0xFF0F172A),
         contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

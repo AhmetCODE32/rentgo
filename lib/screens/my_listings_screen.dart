@@ -14,6 +14,7 @@ class MyListingsScreen extends StatelessWidget {
       ),
       body: Consumer<AppState>(
         builder: (context, appState, child) {
+          // DOĞRU LİSTEYİ KULLAN: allVehicles
           final myVehicles = appState.allVehicles;
 
           if (myVehicles.isEmpty) {

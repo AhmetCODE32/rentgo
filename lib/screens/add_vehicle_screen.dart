@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,20 +17,69 @@ class AddVehicleScreen extends StatefulWidget {
 class _AddVehicleScreenState extends State<AddVehicleScreen> {
   bool isCar = true;
   String selectedCity = 'Kilis';
+  bool _isLoading = false;
 
   final titleController = TextEditingController();
   final priceController = TextEditingController();
 
   final ImagePicker picker = ImagePicker();
-  final List<File> images = [];
+  final List<File> images = []; // Resimler hala dosya olarak seçiliyor, yükleme sonraki adım
 
-  // Fotoğraf Seçme Fonksiyonu
+  Future<void> _addVehicle() async {
+    final user = Provider.of<User?>(context, listen: false);
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('İlan eklemek için giriş yapmalısınız.')),
+      );
+      return;
+    }
+
+    if (titleController.text.isEmpty || priceController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lütfen boş alan bırakmayın!')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final newVehicle = Vehicle(
+      userId: user.uid,
+      title: titleController.text,
+      city: selectedCity,
+      price: "${priceController.text}₺ / gün",
+      isCar: isCar,
+      images: [], // Şimdilik boş, resim yükleme sonraki adım
+    );
+
+    try {
+      await context.read<AppState>().addVehicle(newVehicle);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('İlanınız başarıyla yayınlandı!')),
+        );
+        // HATALI KOMUT DEĞİŞTİRİLDİ: Ana ekrana (0. index) git
+        context.read<AppState>().setPageIndex(0);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('İlan yayınlanamadı: ${e.toString()}')),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> pickImages() async {
     final picked = await picker.pickMultiImage(imageQuality: 70);
 
     if (picked.isNotEmpty) {
       setState(() {
-        // Toplamda en fazla 5 resim olmasına izin ver
         if (images.length + picked.length <= 5) {
           images.addAll(picked.map((e) => File(e.path)));
         } else {
@@ -59,7 +109,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ARAÇ TİPİ SEÇİMİ
+            // ... (diğer widget'lar aynı kaldı) ...
             Row(
               children: [
                 Expanded(
@@ -84,14 +134,12 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
             const SizedBox(height: 24),
 
-            // FOTOĞRAF ALANI
             const Text(
               'Fotoğraflar (En fazla 5)',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
 
-            // Seçilen Resimleri Yatayda Gösteren Liste
             if (images.isNotEmpty)
               SizedBox(
                 height: 110,
@@ -109,11 +157,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                             borderRadius: BorderRadius.circular(12),
                             image: DecorationImage(
                               image: FileImage(images[index]),
-                              fit: BoxFit.cover, // Resmi kutuya tam yayar
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
-                        // SİLME BUTONU (Kırmızı Çarpı)
                         Positioned(
                           top: 0,
                           right: 4,
@@ -141,7 +188,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
             const SizedBox(height: 8),
 
-            // Fotoğraf Ekleme Butonu
             if (images.length < 5)
               InkWell(
                 onTap: pickImages,
@@ -149,10 +195,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(30),
                   decoration: BoxDecoration(
-                    color: Colors.blueAccent.withValues(alpha: 0.1),
+                    color: Colors.blueAccent.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.blueAccent.withValues(alpha: 0.5),
+                      color: Colors.blueAccent.withOpacity(0.5),
                       style: BorderStyle.solid,
                     ),
                   ),
@@ -168,7 +214,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
             const SizedBox(height: 24),
 
-            // ŞEHİR SEÇİMİ
             const Text('Şehir', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Container(
@@ -191,7 +236,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
             const SizedBox(height: 24),
 
-            // BİLGİ GİRİŞLERİ
             _Input(
               controller: titleController,
               hint: isCar ? 'Marka / Model (Örn: BMW 320i)' : 'Marka / Model (Örn: Yamaha R25)',
@@ -208,7 +252,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
             const SizedBox(height: 40),
 
-            // İLANI YAYINLA BUTONU
             SizedBox(
               width: double.infinity,
               height: 54,
@@ -218,46 +261,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                onPressed: () {
-                  if (images.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Lütfen en az bir fotoğraf ekleyin!')),
-                    );
-                    return;
-                  }
-
-                  if (titleController.text.isEmpty || priceController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Lütfen boş alan bırakmayın!')),
-                    );
-                    return;
-                  }
-
-                  // 1. Yeni Araç Nesnesi Oluştur
-                  final newVehicle = Vehicle(
-                    title: titleController.text,
-                    city: selectedCity,
-                    price: "${priceController.text}₺ / gün",
-                    isCar: isCar,
-                    images: images,
-                  );
-
-                  // 2. AppState (Provider) üzerinden listeye ekle
-                  Provider.of<AppState>(context, listen: false).addVehicle(newVehicle);
-
-                  // 3. Başarılı Mesajı ve Geri Dönüş
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('İlanınız başarıyla yayınlandı!')),
-                  );
-
-                  // Hatayı önlemek için sayfadan çıkmayı küçük bir gecikmeyle yap
-                  Future.delayed(const Duration(milliseconds: 100), () {
-                    if (Navigator.canPop(context)) {
-                      Navigator.pop(context);
-                    }
-                  });
-                },
-                child: const Text('İlanı Yayınla', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                onPressed: _isLoading ? null : _addVehicle,
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('İlanı Yayınla', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -267,7 +274,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }
 }
 
-// YARDIMCI BİLEŞEN: ARAÇ TİPİ KARTI
+// ... (diğer yardımcı widget'lar aynı kaldı) ...
+
 class _TypeCard extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -312,7 +320,6 @@ class _TypeCard extends StatelessWidget {
   }
 }
 
-// YARDIMCI BİLEŞEN: GİRİŞ ALANI (TEXTFIELD)
 class _Input extends StatelessWidget {
   final TextEditingController controller;
   final String hint;

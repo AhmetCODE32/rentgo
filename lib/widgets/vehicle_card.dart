@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import '../models/vehicle.dart';
 import '../screens/vehicle_detail_screen.dart';
@@ -11,19 +9,29 @@ class VehicleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Fotoğrafı gösterecek widget
     Widget imageWidget;
-    if (vehicle.images != null && vehicle.images!.isNotEmpty) {
+
+    // Resim varsa, Image.network ile göster
+    if (vehicle.images.isNotEmpty) {
       imageWidget = ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.file(
-          vehicle.images!.first,
+        child: Image.network(
+          vehicle.images.first, // URL (String)
           width: 56,
           height: 56,
           fit: BoxFit.cover,
+          // Yüklenirken veya hata durumunda ne gösterileceği
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(child: CircularProgressIndicator());
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(Icons.broken_image, size: 56);
+          },
         ),
       );
     } else {
+      // Resim yoksa, varsayılan ikonu göster
       imageWidget = CircleAvatar(
         radius: 28,
         backgroundColor: Colors.blueAccent.withOpacity(0.2),
@@ -49,7 +57,7 @@ class VehicleCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              imageWidget, // Avatar yerine resim veya icon
+              imageWidget,
               const SizedBox(width: 16),
               Expanded(
                 child: Column(

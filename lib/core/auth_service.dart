@@ -18,9 +18,9 @@ class AuthService {
         await result.user!.sendEmailVerification();
       }
       return result.user;
-    } catch (e) {
-      print(e.toString());
-      return null;
+    } on FirebaseAuthException catch (e) {
+      // Hatanın kendisini fırlatarak arayüzün yakalamasını sağla
+      throw e;
     }
   }
 
@@ -32,9 +32,9 @@ class AuthService {
         password: password,
       );
       return result.user;
-    } catch (e) {
-      print(e.toString());
-      return null;
+    } on FirebaseAuthException catch (e) {
+      // Hatanın kendisini fırlatarak arayüzün yakalamasını sağla
+      throw e;
     }
   }
 

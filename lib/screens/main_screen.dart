@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../core/app_state.dart';
 import 'home_screen.dart';
 import 'add_vehicle_screen.dart';
 import 'profile_screen.dart';
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
 
-  @override
-  State<MainScreen> createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> {
-  int index = 0;
-
-  final pages = const [
+  // EKRANLARI GÖSTERMEK İÇİN KULLANILACAK WIDGET LİSTESİ
+  static const List<Widget> _widgetOptions = <Widget>[
     HomeScreen(),
     AddVehicleScreen(),
     ProfileScreen(),
@@ -21,11 +17,18 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Merkezi AppState'den sayfa indeksini dinle
+    final appState = context.watch<AppState>();
+
     return Scaffold(
-      body: pages[index],
+      body: IndexedStack(
+        index: appState.pageIndex,
+        children: _widgetOptions,
+      ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: index,
-        onTap: (i) => setState(() => index = i),
+        currentIndex: appState.pageIndex,
+        // Butona basıldığında AppState'i güncelle
+        onTap: (index) => context.read<AppState>().setPageIndex(index),
         backgroundColor: const Color(0xFF020617),
         selectedItemColor: Colors.blueAccent,
         unselectedItemColor: Colors.grey,

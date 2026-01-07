@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:rentgo/core/auth_service.dart';
 import 'package:rentgo/screens/login_screen.dart';
 import 'package:rentgo/screens/main_screen.dart';
+import 'package:rentgo/screens/verify_email_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -10,7 +10,7 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: AuthService().user,
+      stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         // Yükleniyor durumu
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -21,9 +21,14 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        // Kullanıcı giriş yapmışsa ana ekranı göster
+        // Kullanıcı giriş yapmış mı?
         if (snapshot.hasData) {
-          return const MainScreen();
+          // E-postası onaylı mı?
+          if (snapshot.data!.emailVerified) {
+            return const MainScreen(); // Onaylıysa ana ekran
+          } else {
+            return const VerifyEmailScreen(); // Onaylı değilse bekleme odası
+          }
         }
 
         // Kullanıcı giriş yapmamışsa giriş ekranını göster

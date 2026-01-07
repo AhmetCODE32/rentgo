@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:rentgo/core/auth_service.dart';
 
@@ -11,7 +12,7 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController(); // Yeni
+  final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
 
   bool _isLoading = false;
@@ -35,25 +36,32 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => _isLoading = true);
 
-    final user = await _authService.signUpWithEmailAndPassword(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    if (user != null) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kayıt başarılı! Lütfen e-postanızı kontrol ederek hesabınızı doğrulayın.')),
+    try {
+      await _authService.signUpWithEmailAndPassword(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
-    } else {
+      // Navigasyon AuthGate'e bırakıldı, burada yönlendirme yapma!
+
+    } on FirebaseAuthException catch (e) {
+      String message;
+      if (e.code == 'weak-password') {
+        message = 'Şifreniz çok zayıf. Lütfen en az 6 karakter kullanın.';
+      } else if (e.code == 'email-already-in-use') {
+        message = 'Bu e-posta adresi zaten kullanılıyor.';
+      } else {
+        message = 'Kayıt başarısız: ${e.message}';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kayıt başarısız. Lütfen bilgilerinizi kontrol edin veya farklı bir e-posta deneyin.')),
+        SnackBar(content: Text(message)),
       );
     }
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
+
 
   @override
   void dispose() {
@@ -126,7 +134,12 @@ class _SignupScreenState extends State<SignupScreen> {
                   children: [
                     const Text('Zaten bir hesabınız var mı?', style: TextStyle(color: Colors.grey)),
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        // Kayıt ekranını kapatıp giriş ekranına dön
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                      },
                       child: const Text('Giriş Yapın'),
                     ),
                   ],
