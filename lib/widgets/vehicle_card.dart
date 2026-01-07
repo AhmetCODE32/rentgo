@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Sayı formatlama için eklendi
 import '../models/vehicle.dart';
 import '../screens/vehicle_detail_screen.dart';
 
@@ -11,27 +12,24 @@ class VehicleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget imageWidget;
 
-    // Resim varsa, Image.network ile göster
     if (vehicle.images.isNotEmpty) {
       imageWidget = ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Image.network(
-          vehicle.images.first, // URL (String)
+          vehicle.images.first,
           width: 56,
           height: 56,
           fit: BoxFit.cover,
-          // Yüklenirken veya hata durumunda ne gösterileceği
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             return const Center(child: CircularProgressIndicator());
           },
           errorBuilder: (context, error, stackTrace) {
-            return const Icon(Icons.broken_image, size: 56);
+            return const Icon(Icons.broken_image, size: 56, color: Colors.grey);
           },
         ),
       );
     } else {
-      // Resim yoksa, varsayılan ikonu göster
       imageWidget = CircleAvatar(
         radius: 28,
         backgroundColor: Colors.blueAccent.withOpacity(0.2),
@@ -40,6 +38,15 @@ class VehicleCard extends StatelessWidget {
           color: Colors.blueAccent,
         ),
       );
+    }
+
+    // Fiyat formatlayıcı
+    final priceFormatter = NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0);
+    String formattedPrice;
+    if (vehicle.listingType == ListingType.rent) {
+      formattedPrice = "${priceFormatter.format(vehicle.price)} / gün";
+    } else {
+      formattedPrice = priceFormatter.format(vehicle.price);
     }
 
     return InkWell(
@@ -65,10 +72,7 @@ class VehicleCard extends StatelessWidget {
                   children: [
                     Text(
                       vehicle.title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       vehicle.city,
@@ -78,11 +82,8 @@ class VehicleCard extends StatelessWidget {
                 ),
               ),
               Text(
-                vehicle.price,
-                style: const TextStyle(
-                  color: Colors.blueAccent,
-                  fontWeight: FontWeight.bold,
-                ),
+                formattedPrice, // DİNAMİK FİYAT GÖSTERİMİ
+                style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ],
           ),

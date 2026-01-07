@@ -29,7 +29,6 @@ class MyListingsScreen extends StatelessWidget {
               style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
               child: const Text('Sil'),
               onPressed: () {
-                // AppState üzerinden silme işlemini çağır
                 context.read<AppState>().deleteVehicle(vehicle.id!);
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(

@@ -8,6 +8,7 @@ class AppState extends ChangeNotifier {
   StreamSubscription? _vehiclesSubscription;
 
   // Durum Değişkenleri
+  bool _isLoading = true; // YENİ: Başlangıçta yükleniyor
   List<Vehicle> _allVehicles = [];
   String _city = 'Tümü';
   bool _showCars = true;
@@ -19,6 +20,7 @@ class AppState extends ChangeNotifier {
   }
 
   // Getter'lar
+  bool get isLoading => _isLoading; // YENİ
   String get city => _city;
   bool get showCars => _showCars;
   String get searchTerm => _searchTerm;
@@ -37,7 +39,10 @@ class AppState extends ChangeNotifier {
   void _listenToVehicles() {
     _vehiclesSubscription = _firestoreService.getVehiclesStream().listen((snapshot) {
       _allVehicles = snapshot.docs.map((doc) => doc.data()).toList();
-      notifyListeners();
+      if (_isLoading) {
+        _isLoading = false; // İlk veri geldiğinde yükleme durumunu kapat
+      }
+      notifyListeners(); // Arayüzü güncelle
     });
   }
 
@@ -45,10 +50,8 @@ class AppState extends ChangeNotifier {
     await _firestoreService.addVehicle(vehicle);
   }
 
-  // YENİ: Silme metodu
   Future<void> deleteVehicle(String vehicleId) async {
     await _firestoreService.deleteVehicle(vehicleId);
-    // Dinleyici sayesinde arayüz otomatik güncellenecek
   }
 
   // Setter'lar

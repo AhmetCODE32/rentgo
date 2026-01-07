@@ -45,7 +45,7 @@ class MainScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
               _buildNavItem(context, icon: Icons.directions_car, label: 'Araçlar', index: 0),
-              const SizedBox(width: 48), // Ortadaki boşluk
+              const SizedBox(width: 48),
               _buildNavItem(context, icon: Icons.person, label: 'Profil', index: 1),
             ],
           ),
@@ -61,12 +61,11 @@ class MainScreen extends StatelessWidget {
       child: InkWell(
         onTap: () => context.read<AppState>().setPageIndex(index),
         borderRadius: BorderRadius.circular(20),
-        // HATAYI ÇÖZMEK İÇİN YAPI DEĞİŞTİRİLDİ
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, // Dikeyde ortala
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: isSelected ? Colors.blueAccent : Colors.grey),
-            const SizedBox(height: 4), // İkon ve yazı arası boşluk
+            const SizedBox(height: 4),
             Text(label, style: TextStyle(color: isSelected ? Colors.blueAccent : Colors.grey, fontSize: 12)),
           ],
         ),

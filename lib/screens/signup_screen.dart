@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:rentgo/core/auth_service.dart';
+import 'package:rentgo/screens/login_screen.dart'; // EKLENDİ
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -41,7 +42,6 @@ class _SignupScreenState extends State<SignupScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-      // Navigasyon AuthGate'e bırakıldı, burada yönlendirme yapma!
 
     } on FirebaseAuthException catch (e) {
       String message;
@@ -102,7 +102,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   isPassword: true,
                 ),
                 const SizedBox(height: 16),
-                // ŞİFRE DOĞRULAMA ALANI
                 _AuthInput(
                   controller: _confirmPasswordController,
                   hint: 'Şifreyi Onayla',
@@ -134,11 +133,17 @@ class _SignupScreenState extends State<SignupScreen> {
                   children: [
                     const Text('Zaten bir hesabınız var mı?', style: TextStyle(color: Colors.grey)),
                     TextButton(
+                      // Hatalı Navigasyon Düzeltildi
                       onPressed: () {
-                        // Kayıt ekranını kapatıp giriş ekranına dön
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
+                        Navigator.pushReplacement(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              return FadeTransition(opacity: animation, child: child);
+                            },
+                          ),
+                        );
                       },
                       child: const Text('Giriş Yapın'),
                     ),

@@ -1,30 +1,60 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:rentgo/core/firestore_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirestoreService _firestoreService = FirestoreService();
 
-  // Kullanıcı oturum durumunu dinleyen stream
   Stream<User?> get user => _auth.authStateChanges();
 
-  // E-posta ve şifre ile kayıt olma ve ONAY MAİLİ GÖNDERME
+  Future<User?> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return null;
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final User? user = userCredential.user;
+
+      // Yeni kullanıcı ise Firestore'da profil oluştur
+      if (user != null && userCredential.additionalUserInfo?.isNewUser == true) {
+        await _firestoreService.createUserProfile(user);
+      }
+
+      return user;
+    } catch (e) {
+      print(e);
+      throw Exception('Google ile giriş yaparken bir hata oluştu.');
+    }
+  }
+
   Future<User?> signUpWithEmailAndPassword(String email, String password) async {
     try {
       final result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      // Kullanıcı oluşturulduktan hemen sonra onay maili gönder
-      if (result.user != null && !result.user!.emailVerified) {
-        await result.user!.sendEmailVerification();
+      final User? user = result.user;
+
+      // Yeni kullanıcı için Firestore'da profil oluştur
+      if (user != null) {
+        await _firestoreService.createUserProfile(user);
+        if (!user.emailVerified) {
+          await user.sendEmailVerification();
+        }
       }
-      return result.user;
+      return user;
     } on FirebaseAuthException catch (e) {
-      // Hatanın kendisini fırlatarak arayüzün yakalamasını sağla
       throw e;
     }
   }
 
-  // E-posta ve şifre ile giriş yapma
   Future<User?> signInWithEmailAndPassword(String email, String password) async {
     try {
       final result = await _auth.signInWithEmailAndPassword(
@@ -33,13 +63,12 @@ class AuthService {
       );
       return result.user;
     } on FirebaseAuthException catch (e) {
-      // Hatanın kendisini fırlatarak arayüzün yakalamasını sağla
       throw e;
     }
   }
 
-  // Çıkış yapma
   Future<void> signOut() async {
+    await GoogleSignIn().signOut();
     await _auth.signOut();
   }
 }
