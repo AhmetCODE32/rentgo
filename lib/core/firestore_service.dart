@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:rentgo/core/storage_service.dart';
 import '../models/vehicle.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final StorageService _storageService = StorageService(); // Storage servisi eklendi
 
   late final CollectionReference<Vehicle> _vehiclesRef;
   late final CollectionReference<Map<String, dynamic>> _usersRef;
@@ -25,28 +27,41 @@ class FirestoreService {
     return _vehiclesRef.add(vehicle);
   }
 
-  Future<void> deleteVehicle(String vehicleId) {
-    return _vehiclesRef.doc(vehicleId).delete();
+  // YENİ VE GÜVENLİ SİLME METODU
+  Future<void> deleteVehicle(String vehicleId) async {
+    try {
+      // 1. Önce silinecek ilanın belgesini al
+      final doc = await _vehiclesRef.doc(vehicleId).get();
+      final vehicle = doc.data();
+
+      if (vehicle != null) {
+        // 2. İlanın resim URL'lerini kullanarak Storage'dan resimleri sil
+        final deleteImageFutures = vehicle.images.map((url) => _storageService.deleteImageFromUrl(url));
+        await Future.wait(deleteImageFutures); // Tüm silme işlemlerinin bitmesini bekle
+      }
+
+      // 3. Resimler silindikten sonra Firestore belgesini sil
+      await _vehiclesRef.doc(vehicleId).delete();
+    } catch (e) {
+      print('İlan silinirken bir hata oluştu: $e');
+      rethrow;
+    }
   }
 
   // --- User Profile Methods ---
-
-  // Yeni kullanıcı için veritabanında bir döküman oluşturur
   Future<void> createUserProfile(User user) {
     return _usersRef.doc(user.uid).set({
       'uid': user.uid,
       'email': user.email,
       'displayName': user.displayName ?? user.email?.split('@').first ?? 'Kullanıcı',
       'photoURL': user.photoURL,
-    }, SetOptions(merge: true)); // Eğer veri varsa üzerine yazma, birleştir
+    }, SetOptions(merge: true));
   }
 
-  // Belirli bir kullanıcının profilini dinleyen stream
   Stream<DocumentSnapshot<Map<String, dynamic>>> getUserProfileStream(String uid) {
     return _usersRef.doc(uid).snapshots();
   }
 
-  // Kullanıcı profilini güncelle
   Future<void> updateUserProfile(String uid, {String? displayName, String? photoURL}) {
     final Map<String, dynamic> dataToUpdate = {};
     if (displayName != null) dataToUpdate['displayName'] = displayName;

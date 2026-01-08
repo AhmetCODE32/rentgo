@@ -42,8 +42,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     try {
       String? newPhotoURL;
+      // UZMAN METODU KULLAN
       if (_selectedImage != null) {
-        newPhotoURL = await StorageService().uploadImage(_selectedImage!); 
+        newPhotoURL = await StorageService().uploadProfileImage(_selectedImage!, user.uid);
       }
 
       await FirestoreService().updateUserProfile(

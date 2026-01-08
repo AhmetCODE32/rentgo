@@ -1,93 +1,100 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Sayı formatlama için eklendi
-import '../models/vehicle.dart';
-import '../screens/vehicle_detail_screen.dart';
+import 'package:intl/intl.dart';
+import 'package:rentgo/models/vehicle.dart';
+import 'package:rentgo/screens/vehicle_detail_screen.dart';
 
 class VehicleCard extends StatelessWidget {
   final Vehicle vehicle;
-
   const VehicleCard({super.key, required this.vehicle});
 
   @override
   Widget build(BuildContext context) {
-    Widget imageWidget;
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    if (vehicle.images.isNotEmpty) {
-      imageWidget = ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          vehicle.images.first,
-          width: 56,
-          height: 56,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(child: CircularProgressIndicator());
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return const Icon(Icons.broken_image, size: 56, color: Colors.grey);
-          },
-        ),
-      );
-    } else {
-      imageWidget = CircleAvatar(
-        radius: 28,
-        backgroundColor: Colors.blueAccent.withOpacity(0.2),
-        child: Icon(
-          vehicle.isCar ? Icons.directions_car : Icons.motorcycle,
-          color: Colors.blueAccent,
-        ),
-      );
-    }
-
-    // Fiyat formatlayıcı
     final priceFormatter = NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0);
-    String formattedPrice;
-    if (vehicle.listingType == ListingType.rent) {
-      formattedPrice = "${priceFormatter.format(vehicle.price)} / gün";
-    } else {
-      formattedPrice = priceFormatter.format(vehicle.price);
-    }
+    String formattedPrice = vehicle.listingType == ListingType.rent
+        ? "${priceFormatter.format(vehicle.price)}/gün"
+        : priceFormatter.format(vehicle.price);
 
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => VehicleDetailScreen(vehicle: vehicle),
-          ),
-        );
-      },
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => VehicleDetailScreen(vehicle: vehicle))),
       child: Card(
-        margin: const EdgeInsets.only(bottom: 16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              imageWidget,
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      vehicle.title,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      vehicle.city,
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                formattedPrice, // DİNAMİK FİYAT GÖSTERİMİ
-                style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ],
-          ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            _buildImage(context, colorScheme),
+            Positioned(top: 12, right: 12, child: _PriceBadge(price: formattedPrice)),
+            Positioned(bottom: 0, left: 0, right: 0, child: _InfoGradientLayer(textTheme: textTheme, vehicle: vehicle)),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildImage(BuildContext context, ColorScheme colorScheme) {
+    return vehicle.images.isNotEmpty
+        ? Semantics(
+            label: '${vehicle.title} için resim',
+            child: CachedNetworkImage(
+              imageUrl: vehicle.images.first,
+              height: 220,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(height: 220, color: colorScheme.surface, child: const Center(child: CircularProgressIndicator())),
+              errorWidget: (context, url, error) => _buildPlaceholderImage(context, colorScheme),
+            ),
+          )
+        : _buildPlaceholderImage(context, colorScheme);
+  }
+
+  Widget _buildPlaceholderImage(BuildContext context, ColorScheme colorScheme) {
+    return Container(
+      height: 220,
+      color: colorScheme.surface,
+      child: Center(child: Icon(vehicle.isCar ? Icons.directions_car : Icons.motorcycle, size: 60, color: colorScheme.primary.withOpacity(0.5))),
+    );
+  }
+}
+
+class _PriceBadge extends StatelessWidget {
+  final String price;
+  const _PriceBadge({required this.price});
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      label: Text(price, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    );
+  }
+}
+
+class _InfoGradientLayer extends StatelessWidget {
+  final TextTheme textTheme;
+  final Vehicle vehicle;
+  const _InfoGradientLayer({required this.textTheme, required this.vehicle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Colors.black54, Colors.black87],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(vehicle.title, style: textTheme.titleLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 4),
+          Row(children: [Icon(Icons.location_on, size: 14, color: textTheme.bodySmall?.color), const SizedBox(width: 4), Text(vehicle.city, style: textTheme.bodySmall)])
+        ],
       ),
     );
   }

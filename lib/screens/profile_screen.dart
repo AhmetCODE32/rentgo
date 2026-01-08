@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:rentgo/core/auth_service.dart';
 import 'package:rentgo/core/firestore_service.dart';
 import 'package:rentgo/screens/edit_profile_screen.dart';
+import 'package:rentgo/screens/invoices_screen.dart';
 import '../core/app_state.dart';
 import 'my_listings_screen.dart';
 
@@ -25,22 +26,12 @@ class ProfileScreen extends StatelessWidget {
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: firestoreService.getUserProfileStream(user.uid),
         builder: (context, snapshot) {
-          // Yükleniyor durumu
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          
-          // KENDİNİ İYİLEŞTİRME MEKANİZMASI
-          // Eğer veri yoksa (eski kullanıcı) ama kullanıcı giriş yapmışsa, profili o an oluştur.
           if (!snapshot.hasData || !snapshot.data!.exists) {
             firestoreService.createUserProfile(user);
-            // Profil oluşturulurken kısa bir yükleme ekranı göster.
-            // StreamBuilder, döküman oluşturulduğunda otomatik olarak yeniden tetiklenecektir.
             return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return const Center(child: Text('Bir hata oluştu.'));
           }
 
           final userData = snapshot.data!.data()!;
@@ -51,6 +42,7 @@ class ProfileScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
+                // PROFİL HEADER
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(20)),
@@ -80,12 +72,15 @@ class ProfileScreen extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
+                // MENÜ
                 Consumer<AppState>(
                   builder: (context, appState, child) {
                     final myListingCount = appState.allVehicles.where((v) => v.userId == user.uid).length;
                     return _ProfileTile(icon: Icons.directions_car_outlined, title: 'İlanlarım', badge: myListingCount.toString(), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyListingsScreen())));
                   },
                 ),
+                _ProfileTile(icon: Icons.receipt_long_outlined, title: 'Faturalarım', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoicesScreen()))),
+                const Divider(height: 24),
                 _ProfileTile(icon: Icons.logout, title: 'Çıkış Yap', isDanger: true, onTap: () => context.read<AuthService>().signOut()),
               ],
             ),

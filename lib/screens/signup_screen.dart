@@ -1,7 +1,10 @@
+import 'package:animate_do/animate_do.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rentgo/core/auth_service.dart';
-import 'package:rentgo/screens/login_screen.dart'; // EKLENDİ
+import 'package:rentgo/screens/login_screen.dart';
+import 'package:rentgo/screens/phone_auth_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -19,49 +22,39 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isLoading = false;
 
   Future<void> _signup() async {
-    if (_emailController.text.isEmpty ||
-        _passwordController.text.isEmpty ||
-        _confirmPasswordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen tüm alanları doldurun.')),
-      );
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty || _confirmPasswordController.text.isEmpty) {
+      _showError('Lütfen tüm alanları doldurun.');
       return;
     }
-
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Şifreler eşleşmiyor.')),
-      );
+      _showError('Şifreler eşleşmiyor.');
       return;
     }
+    await _performAuthAction(() => _authService.signUpWithEmailAndPassword(_emailController.text.trim(), _passwordController.text.trim()));
+  }
 
+  Future<void> _googleLogin() async {
+    await _performAuthAction(() => _authService.signInWithGoogle());
+  }
+
+  Future<void> _performAuthAction(Future<User?> Function() authAction) async {
     setState(() => _isLoading = true);
-
     try {
-      await _authService.signUpWithEmailAndPassword(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
-
-    } on FirebaseAuthException catch (e) {
-      String message;
-      if (e.code == 'weak-password') {
-        message = 'Şifreniz çok zayıf. Lütfen en az 6 karakter kullanın.';
-      } else if (e.code == 'email-already-in-use') {
-        message = 'Bu e-posta adresi zaten kullanılıyor.';
-      } else {
-        message = 'Kayıt başarısız: ${e.message}';
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      await authAction();
+    } catch (e) {
+      _showError('İşlem başarısız oldu: ${e.toString()}');
     }
-
     if (mounted) {
       setState(() => _isLoading = false);
     }
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+    );
+  }
 
   @override
   void dispose() {
@@ -78,78 +71,44 @@ class _SignupScreenState extends State<SignupScreen> {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.person_add_alt_1, color: Colors.blueAccent, size: 80),
-                const SizedBox(height: 24),
-                Text('Yeni Hesap Oluştur', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                const Text('Maceraya katılın!', style: TextStyle(color: Colors.grey)),
-                const SizedBox(height: 40),
-
-                _AuthInput(
-                  controller: _emailController,
-                  hint: 'E-posta',
-                  icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 16),
-                _AuthInput(
-                  controller: _passwordController,
-                  hint: 'Şifre',
-                  icon: Icons.lock_outline,
-                  isPassword: true,
-                ),
-                const SizedBox(height: 16),
-                _AuthInput(
-                  controller: _confirmPasswordController,
-                  hint: 'Şifreyi Onayla',
-                  icon: Icons.lock_clock_outlined,
-                  isPassword: true,
-                ),
-                const SizedBox(height: 32),
-
-                _isLoading
-                    ? const CircularProgressIndicator()
-                    : SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                          onPressed: _signup,
-                          child: const Text('Kayıt Ol', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        ),
+            child: AbsorbPointer(
+              absorbing: _isLoading,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FadeInDown(duration: const Duration(milliseconds: 800), child: const Icon(Icons.person_add_alt_1, color: Colors.blueAccent, size: 80)),
+                  const SizedBox(height: 24),
+                  FadeInUp(delay: const Duration(milliseconds: 200), child: Text('Yeni Hesap Oluştur', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold))),
+                  const SizedBox(height: 8),
+                  FadeInUp(delay: const Duration(milliseconds: 300), child: const Text('Maceraya katılın!', style: TextStyle(color: Colors.grey))),
+                  const SizedBox(height: 40),
+                  FadeInUp(delay: const Duration(milliseconds: 400), child: _AuthInput(controller: _emailController, hint: 'E-posta', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress)),
+                  const SizedBox(height: 16),
+                  FadeInUp(delay: const Duration(milliseconds: 500), child: _AuthInput(controller: _passwordController, hint: 'Şifre', icon: Icons.lock_outline, isPassword: true)),
+                  const SizedBox(height: 16),
+                  FadeInUp(delay: const Duration(milliseconds: 600), child: _AuthInput(controller: _confirmPasswordController, hint: 'Şifreyi Onayla', icon: Icons.lock_clock_outlined, isPassword: true)),
+                  const SizedBox(height: 32),
+                  if (_isLoading) const CircularProgressIndicator(),
+                  if (!_isLoading)
+                    FadeInUp(
+                      delay: const Duration(milliseconds: 700),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ElevatedButton(onPressed: _signup, child: const Text('Kayıt Ol')),
+                          const SizedBox(height: 24),
+                          const Row(children: [Expanded(child: Divider(color: Colors.white24)), Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('VEYA', style: TextStyle(color: Colors.grey))), Expanded(child: Divider(color: Colors.white24))]),
+                          const SizedBox(height: 24),
+                          OutlinedButton.icon(icon: Image.asset('assets/google_logo.png', height: 22), label: const Text('Google ile Devam Et'), onPressed: _googleLogin),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(icon: const Icon(Icons.phone_iphone), label: const Text('Telefon Numarası ile Devam Et'), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PhoneAuthScreen()))),
+                        ],
                       ),
-
-                const SizedBox(height: 24),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Zaten bir hesabınız var mı?', style: TextStyle(color: Colors.grey)),
-                    TextButton(
-                      // Hatalı Navigasyon Düzeltildi
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
-                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                              return FadeTransition(opacity: animation, child: child);
-                            },
-                          ),
-                        );
-                      },
-                      child: const Text('Giriş Yapın'),
                     ),
-                  ],
-                )
-              ],
+                  const SizedBox(height: 24),
+                  if (!_isLoading) FadeInUp(delay: const Duration(milliseconds: 800), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Text('Zaten bir hesabınız var mı?', style: TextStyle(color: Colors.grey)), TextButton(onPressed: () => Navigator.pushReplacement(context, PageRouteBuilder(pageBuilder: (_, __, ___) => const LoginScreen(), transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child))), child: const Text('Giriş Yapın'))])),
+                ],
+              ),
             ),
           ),
         ),
@@ -158,44 +117,12 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 }
 
-// GİRİŞ ALANI WIDGET'I
 class _AuthInput extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final IconData icon;
-  final bool isPassword;
-  final TextInputType keyboardType;
-
-  const _AuthInput({
-    required this.controller,
-    required this.hint,
-    required this.icon,
-    this.isPassword = false,
-    this.keyboardType = TextInputType.text,
-  });
+  final TextEditingController controller; final String hint; final IconData icon; final bool isPassword; final TextInputType keyboardType;
+  const _AuthInput({super.key, required this.controller, required this.hint, required this.icon, this.isPassword = false, this.keyboardType = TextInputType.text});
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: isPassword,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.grey),
-        prefixIcon: Icon(icon, color: Colors.blueAccent),
-        filled: true,
-        fillColor: const Color(0xFF020617),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.white10),
-        ),
-      ),
-    );
+    return TextField(controller: controller, keyboardType: keyboardType, obscureText: isPassword, decoration: InputDecoration(hintText: hint, prefixIcon: Icon(icon)));
   }
 }

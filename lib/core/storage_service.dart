@@ -5,25 +5,50 @@ import 'package:uuid/uuid.dart';
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // Resmi Firebase Storage'a yükle ve indirme URL'sini döndür
-  Future<String> uploadImage(File file) async {
+  // İlan resimlerini toplu halde yükler
+  Future<List<String>> uploadVehicleImages(List<File> files) async {
     try {
-      // Benzersiz bir dosya adı oluştur (çakışmaları önlemek için)
-      final String fileName = const Uuid().v4();
-      final Reference ref = _storage.ref().child('vehicle_images/$fileName');
+      final List<Future<String>> uploadTasks = files.map((file) async {
+        final String fileName = const Uuid().v4();
+        final Reference ref = _storage.ref().child('vehicle_images/$fileName');
+        final UploadTask uploadTask = ref.putFile(file);
+        final TaskSnapshot snapshot = await uploadTask;
+        return await snapshot.ref.getDownloadURL();
+      }).toList();
 
-      // Dosyayı yükle
-      final UploadTask uploadTask = ref.putFile(file);
-
-      // Yükleme tamamlandığında URL'i al
-      final TaskSnapshot snapshot = await uploadTask;
-      final String downloadUrl = await snapshot.ref.getDownloadURL();
-
-      return downloadUrl;
+      final List<String> downloadUrls = await Future.wait(uploadTasks);
+      return downloadUrls;
     } on FirebaseException catch (e) {
-      // Hata yönetimi
-      print(e);
-      rethrow; // Hatanın üst katmana bildirilmesi için yeniden fırlat
+      print('İlan resimleri yüklenirken hata: $e');
+      rethrow;
+    }
+  }
+
+  // Profil resmini yükler
+  Future<String> uploadProfileImage(File file, String userId) async {
+    try {
+      // Kullanıcıya özel ve sabit bir dosya adı kullan (eskiyi üzerine yazmak için)
+      final Reference ref = _storage.ref().child('profile_images/$userId');
+      final UploadTask uploadTask = ref.putFile(file);
+      final TaskSnapshot snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } on FirebaseException catch (e) {
+      print('Profil resmi yüklenirken hata: $e');
+      rethrow;
+    }
+  }
+
+  // Bir resmi URL'sinden sil
+  Future<void> deleteImageFromUrl(String url) async {
+    if (url.isEmpty) return;
+    try {
+      final Reference ref = _storage.refFromURL(url);
+      await ref.delete();
+    } on FirebaseException catch (e) {
+      if (e.code != 'object-not-found') {
+        print('Resim silinirken hata oluştu: $e');
+        rethrow;
+      }
     }
   }
 }
