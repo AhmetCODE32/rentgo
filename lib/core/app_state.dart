@@ -8,10 +8,10 @@ class AppState extends ChangeNotifier {
   StreamSubscription? _vehiclesSubscription;
 
   // Durum Değişkenleri
-  bool _isLoading = true; // YENİ: Başlangıçta yükleniyor
+  bool _isLoading = true;
   List<Vehicle> _allVehicles = [];
   String _city = 'Tümü';
-  bool _showCars = true;
+  String _selectedCategory = 'Hepsi'; // YENİ: bool _showCars yerine String _selectedCategory
   String _searchTerm = '';
   int _pageIndex = 0;
 
@@ -20,19 +20,20 @@ class AppState extends ChangeNotifier {
   }
 
   // Getter'lar
-  bool get isLoading => _isLoading; // YENİ
+  bool get isLoading => _isLoading;
   String get city => _city;
-  bool get showCars => _showCars;
+  String get selectedCategory => _selectedCategory;
   String get searchTerm => _searchTerm;
   List<Vehicle> get allVehicles => _allVehicles;
   int get pageIndex => _pageIndex;
 
   List<Vehicle> get filteredVehicles {
     return _allVehicles.where((v) {
-      final typeMatch = v.isCar == _showCars;
+      // YENİ: Kategori bazlı filtreleme mantığı
+      final categoryMatch = _selectedCategory == 'Hepsi' || v.category == _selectedCategory;
       final cityMatch = _city == 'Tümü' || v.city == _city;
       final searchMatch = _searchTerm.isEmpty || v.title.toLowerCase().contains(_searchTerm.toLowerCase());
-      return typeMatch && cityMatch && searchMatch;
+      return categoryMatch && cityMatch && searchMatch;
     }).toList();
   }
 
@@ -40,9 +41,9 @@ class AppState extends ChangeNotifier {
     _vehiclesSubscription = _firestoreService.getVehiclesStream().listen((snapshot) {
       _allVehicles = snapshot.docs.map((doc) => doc.data()).toList();
       if (_isLoading) {
-        _isLoading = false; // İlk veri geldiğinde yükleme durumunu kapat
+        _isLoading = false;
       }
-      notifyListeners(); // Arayüzü güncelle
+      notifyListeners();
     });
   }
 
@@ -60,8 +61,9 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setShowCars(bool value) {
-    _showCars = value;
+  // YENİ: Kategori değiştirme metodu
+  void setCategory(String value) {
+    _selectedCategory = value;
     notifyListeners();
   }
 

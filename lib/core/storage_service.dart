@@ -4,51 +4,45 @@ import 'package:uuid/uuid.dart';
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final _uuid = const Uuid();
 
-  // İlan resimlerini toplu halde yükler
-  Future<List<String>> uploadVehicleImages(List<File> files) async {
-    try {
-      final List<Future<String>> uploadTasks = files.map((file) async {
-        final String fileName = const Uuid().v4();
-        final Reference ref = _storage.ref().child('vehicle_images/$fileName');
-        final UploadTask uploadTask = ref.putFile(file);
-        final TaskSnapshot snapshot = await uploadTask;
-        return await snapshot.ref.getDownloadURL();
-      }).toList();
-
-      final List<String> downloadUrls = await Future.wait(uploadTasks);
-      return downloadUrls;
-    } on FirebaseException catch (e) {
-      print('İlan resimleri yüklenirken hata: $e');
-      rethrow;
+  // --- İLAN RESİMLERİ YÜKLEME ---
+  Future<List<String>> uploadVehicleImages(List<File> images) async {
+    List<String> urls = [];
+    for (var image in images) {
+      String fileName = _uuid.v4();
+      Reference ref = _storage.ref().child('vehicle_images').child(fileName);
+      UploadTask uploadTask = ref.putFile(image);
+      TaskSnapshot snapshot = await uploadTask;
+      String url = await snapshot.ref.getDownloadURL();
+      urls.add(url);
     }
+    return urls;
   }
 
-  // Profil resmini yükler
-  Future<String> uploadProfileImage(File file, String userId) async {
-    try {
-      // Kullanıcıya özel ve sabit bir dosya adı kullan (eskiyi üzerine yazmak için)
-      final Reference ref = _storage.ref().child('profile_images/$userId');
-      final UploadTask uploadTask = ref.putFile(file);
-      final TaskSnapshot snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL();
-    } on FirebaseException catch (e) {
-      print('Profil resmi yüklenirken hata: $e');
-      rethrow;
-    }
+  // --- PROFİL RESMİ YÜKLEME ---
+  Future<String> uploadProfileImage(File image, String uid) async {
+    Reference ref = _storage.ref().child('profile_images').child('$uid.jpg');
+    UploadTask uploadTask = ref.putFile(image);
+    TaskSnapshot snapshot = await uploadTask;
+    return await snapshot.ref.getDownloadURL();
   }
 
-  // Bir resmi URL'sinden sil
+  // --- CHAT RESMİ YÜKLEME (YENİ) ---
+  Future<String> uploadChatImage(File image) async {
+    String fileName = 'chat_${_uuid.v4()}.jpg';
+    Reference ref = _storage.ref().child('chat_images').child(fileName);
+    UploadTask uploadTask = ref.putFile(image);
+    TaskSnapshot snapshot = await uploadTask;
+    return await snapshot.ref.getDownloadURL();
+  }
+
+  // --- RESİM SİLME ---
   Future<void> deleteImageFromUrl(String url) async {
-    if (url.isEmpty) return;
     try {
-      final Reference ref = _storage.refFromURL(url);
-      await ref.delete();
-    } on FirebaseException catch (e) {
-      if (e.code != 'object-not-found') {
-        print('Resim silinirken hata oluştu: $e');
-        rethrow;
-      }
+      await _storage.refFromURL(url).delete();
+    } catch (e) {
+      print('Resim silinirken hata (Dosya zaten silinmiş olabilir): $e');
     }
   }
 }

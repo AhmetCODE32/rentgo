@@ -5,17 +5,20 @@ enum ListingType { rent, sale }
 class Vehicle {
   final String? id;
   final String userId;
-  final String sellerName; // YENİ
-  final String phoneNumber; // YENİ
+  final String sellerName;
+  final String phoneNumber;
   final String title;
   final String description;
   final String city;
-  final String pickupAddress; // YENİ
+  final String pickupAddress;
   final double price;
-  final bool isCar;
+  final String category;
   final ListingType listingType;
   final List<String> images;
   final Map<String, dynamic> specs;
+  // YENİ: Koordinat Bilgileri
+  final double? latitude;
+  final double? longitude;
 
   Vehicle({
     this.id,
@@ -27,10 +30,12 @@ class Vehicle {
     required this.city,
     required this.pickupAddress,
     required this.price,
-    required this.isCar,
+    required this.category,
     required this.listingType,
     this.images = const [],
     this.specs = const {},
+    this.latitude,
+    this.longitude,
   });
 
   Map<String, dynamic> toMap() {
@@ -43,10 +48,12 @@ class Vehicle {
       'city': city,
       'pickupAddress': pickupAddress,
       'price': price,
-      'isCar': isCar,
+      'category': category,
       'listingType': listingType.name,
       'images': images,
       'specs': specs,
+      'latitude': latitude,
+      'longitude': longitude,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -63,13 +70,15 @@ class Vehicle {
       city: map['city'] ?? '',
       pickupAddress: map['pickupAddress'] ?? 'Belirtilmemiş',
       price: (map['price'] as num?)?.toDouble() ?? 0.0,
-      isCar: map['isCar'] ?? true,
+      category: map['category'] ?? 'Araba',
       listingType: ListingType.values.firstWhere(
         (e) => e.name == map['listingType'],
         orElse: () => ListingType.rent,
       ),
       images: List<String>.from(map['images'] ?? []),
       specs: Map<String, dynamic>.from(map['specs'] ?? {}),
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
     );
   }
 }

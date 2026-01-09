@@ -1,8 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rentgo/core/constants.dart';
+import 'package:rentgo/core/firestore_service.dart';
+import 'package:rentgo/models/vehicle.dart';
+import 'package:rentgo/widgets/vehicle_card.dart';
 import 'package:shimmer/shimmer.dart';
-import '../core/app_state.dart';
-import '../widgets/vehicle_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,174 +16,279 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final TextEditingController _searchController;
-
-  @override
-  void initState() {
-    super.initState();
-    final appState = context.read<AppState>();
-    _searchController = TextEditingController(text: appState.searchTerm);
-    _searchController.addListener(() {
-      appState.setSearchTerm(_searchController.text);
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+  String _searchQuery = '';
+  String _selectedCategory = 'Hepsi';
+  String _selectedCity = 'Tüm Türkiye';
+  String _sortBy = 'En Yeni'; // VARSAYILAN SIRALAMA
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
-    final textTheme = Theme.of(context).textTheme;
-
+    final user = Provider.of<User?>(context);
+    final firestoreService = FirestoreService();
+    
     return Scaffold(
-      appBar: AppBar(
-        title: Text('RentGo', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-        centerTitle: false,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(user),
+            _buildSearchRow(), // ARAMA VE SIRALAMA YAN YANA
+            _buildCategories(),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot<Vehicle>>(
+                stream: firestoreService.getVehiclesStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) return const Center(child: Text('Bir hata oluştu.'));
+                  if (snapshot.connectionState == ConnectionState.waiting) return _buildLoadingList();
+
+                  final allVehicles = snapshot.data!.docs.map((d) => d.data()).toList();
+                  
+                  // 1. FİLTRELEME MANTIĞI
+                  List<Vehicle> filteredVehicles = allVehicles.where((v) {
+                    final matchesSearch = v.title.toLowerCase().contains(_searchQuery.toLowerCase());
+                    final matchesCategory = _selectedCategory == 'Hepsi' || v.category == _selectedCategory;
+                    final matchesCity = _selectedCity == 'Tüm Türkiye' || v.city == _selectedCity;
+                    return matchesSearch && matchesCategory && matchesCity;
+                  }).toList();
+
+                  // 2. SIRALAMA MANTIĞI (YENİ)
+                  if (_sortBy == 'Fiyat (Artan)') {
+                    filteredVehicles.sort((a, b) => a.price.compareTo(b.price));
+                  } else if (_sortBy == 'Fiyat (Azalan)') {
+                    filteredVehicles.sort((a, b) => b.price.compareTo(a.price));
+                  } else if (_sortBy == 'Yıl (En Yeni)') {
+                    filteredVehicles.sort((a, b) => (b.specs['year'] ?? '').compareTo(a.specs['year'] ?? ''));
+                  }
+
+                  if (filteredVehicles.isEmpty) return _buildEmptyState();
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: filteredVehicles.length,
+                    itemBuilder: (context, index) => VehicleCard(vehicle: filteredVehicles[index]),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _buildHeader(User? user) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hayalindeki Aracı Bul', style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                Text('Kilis & Gaziantep bölgesinde kirala veya satın al', style: textTheme.bodyMedium?.copyWith(color: Colors.grey)),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _searchController,
-                  decoration: const InputDecoration(hintText: 'Marka veya model ara...', prefixIcon: Icon(Icons.search)),
+                GestureDetector(
+                  onTap: _showCityPicker,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.location_on, color: Colors.blueAccent, size: 16),
+                      const SizedBox(width: 4),
+                      Text(_selectedCity, style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 14)),
+                      const Icon(Icons.keyboard_arrow_down, color: Colors.blueAccent, size: 16),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user != null ? 'Selam, ${user.displayName?.split(' ').first ?? 'Sürücü'} 👋' : 'Hoş Geldin!',
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                _CategoryChip(icon: Icons.directions_car, label: 'Arabalar', selected: appState.showCars, onTap: () => appState.setShowCars(true)),
-                const SizedBox(width: 10),
-                _CategoryChip(icon: Icons.motorcycle, label: 'Motorlar', selected: !appState.showCars, onTap: () => appState.setShowCars(false)),
-                const Spacer(),
-                _CityDropdown(value: appState.city, onChanged: (v) => appState.setCity(v!)),
-              ],
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: Colors.blueAccent.withAlpha(30),
+            backgroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
+            child: user?.photoURL == null ? const Icon(Icons.person, color: Colors.blueAccent) : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchRow() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+      child: Row(
+        children: [
+          // ARAMA ÇUBUĞU
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: TextField(
+                onChanged: (v) => setState(() => _searchQuery = v),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Ara...',
+                  hintStyle: TextStyle(color: Colors.white.withAlpha(80)),
+                  prefixIcon: const Icon(Icons.search, color: Colors.blueAccent, size: 20),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
             ),
           ),
-
-          // LİSTE (SHIMMER EFEKTİ İLE)
-          Expanded(
-            child: Consumer<AppState>(
-              builder: (context, appState, child) {
-                // Yükleniyorsa Shimmer göster
-                if (appState.isLoading) {
-                  return Shimmer.fromColors(
-                    baseColor: Theme.of(context).colorScheme.surface,
-                    highlightColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: 5, // Yer tutucu öğe sayısı
-                      itemBuilder: (context, i) => const _VehicleCardPlaceholder(),
-                    ),
-                  );
-                }
-
-                // Veri geldiyse veya boşsa listeyi göster
-                final vehicles = appState.filteredVehicles;
-                if (vehicles.isEmpty) {
-                  return Center(
-                      child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Text('Bu kriterlere uygun ilan bulunamadı.', textAlign: TextAlign.center, style: textTheme.bodyLarge?.copyWith(color: Colors.grey)),
-                  ));
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: vehicles.length,
-                  itemBuilder: (context, i) => VehicleCard(vehicle: vehicles[i]),
-                );
-              },
+          const SizedBox(width: 12),
+          // SIRALAMA BUTONU
+          GestureDetector(
+            onTap: _showSortPicker,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blueAccent.withAlpha(30),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.blueAccent.withAlpha(50)),
+              ),
+              child: const Icon(Icons.swap_vert_rounded, color: Colors.blueAccent),
             ),
           ),
         ],
       ),
     );
   }
-}
 
-// YER TUTUCU KART (SHIMMER İÇİN)
-class _VehicleCardPlaceholder extends StatelessWidget {
-  const _VehicleCardPlaceholder();
+  Widget _buildCategories() {
+    final categories = ['Hepsi', 'Araba', 'Motor', 'Karavan', 'Bisiklet', 'Scooter', 'Ticari'];
+    final icons = [Icons.grid_view_rounded, Icons.directions_car_rounded, Icons.motorcycle_rounded, Icons.rv_hookup_rounded, Icons.pedal_bike_rounded, Icons.electric_scooter_rounded, Icons.local_shipping_rounded];
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return Column(
+      children: [
+        SizedBox(
+          height: 45,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: categories.length,
+            itemBuilder: (context, index) => _buildCategoryItem(categories[index], icons[index]),
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  void _showSortPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        final options = ['En Yeni', 'Fiyat (Artan)', 'Fiyat (Azalan)', 'Yıl (En Yeni)'];
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(padding: EdgeInsets.all(16), child: Text('Sıralama', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white))),
+            const Divider(color: Colors.white10),
+            ...options.map((opt) => ListTile(
+              title: Text(opt, style: TextStyle(color: _sortBy == opt ? Colors.blueAccent : Colors.white)),
+              trailing: _sortBy == opt ? const Icon(Icons.check, color: Colors.blueAccent) : null,
+              onTap: () {
+                setState(() => _sortBy = opt);
+                Navigator.pop(context);
+              },
+            )),
+            const SizedBox(height: 20),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoryItem(String title, IconData icon) {
+    final isSelected = _selectedCategory == title;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedCategory = title),
+      child: Container(
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blueAccent : const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: isSelected ? Colors.blueAccent : Colors.white10),
+        ),
         child: Row(
           children: [
-            Container(width: 56, height: 56, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8))),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(width: double.infinity, height: 20, color: Colors.white),
-                  const SizedBox(height: 8),
-                  Container(width: 100, height: 14, color: Colors.white),
-                ],
-              ),
-            ),
-            Container(width: 60, height: 20, color: Colors.white),
+            Icon(icon, size: 18, color: isSelected ? Colors.white : Colors.blueAccent),
+            const SizedBox(width: 8),
+            Text(title, style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
     );
   }
-}
 
-class _CategoryChip extends StatelessWidget {
-  final IconData icon; final String label; final bool selected; final VoidCallback onTap;
-  const _CategoryChip({required this.icon, required this.label, required this.selected, required this.onTap});
+  void _showCityPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        final allCities = ['Tüm Türkiye', ...AppConstants.turkiyeSehirleri];
+        return Column(
+          children: [
+            const Padding(padding: EdgeInsets.all(16), child: Text('Şehir Seçin', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white))),
+            const Divider(color: Colors.white10),
+            Expanded(
+              child: ListView.builder(
+                itemCount: allCities.length,
+                itemBuilder: (context, index) {
+                  final city = allCities[index];
+                  return ListTile(
+                    title: Text(city, style: TextStyle(color: _selectedCity == city ? Colors.blueAccent : Colors.white)),
+                    trailing: _selectedCity == city ? const Icon(Icons.check, color: Colors.blueAccent) : null,
+                    onTap: () {
+                      setState(() => _selectedCity = city);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? colorScheme.primary : colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? colorScheme.primary : Colors.white24, width: 1),
+  Widget _buildLoadingList() {
+    return Shimmer.fromColors(
+      baseColor: Colors.white10,
+      highlightColor: Colors.white24,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: 3,
+        itemBuilder: (context, index) => Container(
+          height: 220,
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
         ),
-        child: Row(children: [Icon(icon, size: 18, color: selected ? Colors.white : colorScheme.primary), const SizedBox(width: 8), Text(label, style: TextStyle(color: Colors.white, fontWeight: selected ? FontWeight.bold : FontWeight.normal))]),
       ),
     );
   }
-}
 
-class _CityDropdown extends StatelessWidget {
-  final String value; final ValueChanged<String?> onChanged;
-  const _CityDropdown({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButton<String>(
-      value: value,
-      dropdownColor: Theme.of(context).colorScheme.surface,
-      underline: const SizedBox(),
-      icon: Icon(Icons.location_on_outlined, color: Theme.of(context).colorScheme.primary),
-      items: const ['Tümü', 'Kilis', 'Gaziantep'].map((city) => DropdownMenuItem(value: city, child: Text(city))).toList(),
-      onChanged: onChanged,
-      style: Theme.of(context).textTheme.bodyMedium,
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off_rounded, size: 80, color: Colors.white.withAlpha(20)),
+          const SizedBox(height: 16),
+          const Text('Aradığın araç bulunamadı.', style: TextStyle(color: Colors.white70, fontSize: 16)),
+        ],
+      ),
     );
   }
 }

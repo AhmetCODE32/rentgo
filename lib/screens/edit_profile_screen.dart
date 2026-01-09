@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:rentgo/core/constants.dart'; // ŞEHİR LİSTESİ İÇİN
 import 'package:rentgo/core/firestore_service.dart';
 import 'package:rentgo/core/storage_service.dart';
 
@@ -16,6 +17,8 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _nameController;
+  late final TextEditingController _bioController;
+  String? _selectedCity; // ŞEHİR SEÇİMİ İÇİN
   File? _selectedImage;
   bool _isLoading = false;
 
@@ -23,6 +26,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.userData['displayName']);
+    _bioController = TextEditingController(text: widget.userData['bio'] ?? '');
+    _selectedCity = widget.userData['city']; // MEVCUT ŞEHRİ YÜKLE
   }
 
   Future<void> _pickImage() async {
@@ -35,6 +40,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
+    if (_selectedCity == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lütfen şehrinizi seçin.')));
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final user = Provider.of<User?>(context, listen: false);
@@ -42,7 +52,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     try {
       String? newPhotoURL;
-      // UZMAN METODU KULLAN
       if (_selectedImage != null) {
         newPhotoURL = await StorageService().uploadProfileImage(_selectedImage!, user.uid);
       }
@@ -51,6 +60,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         user.uid,
         displayName: _nameController.text,
         photoURL: newPhotoURL,
+        bio: _bioController.text.trim(),
+        city: _selectedCity, // ŞEHİR KAYDEDİLİYOR
       );
 
       if (mounted) {
@@ -71,6 +82,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
@@ -111,6 +123,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Adınız', prefixIcon: Icon(Icons.person_outline)),
+              ),
+              const SizedBox(height: 16),
+              
+              // ŞEHİR SEÇİM ALANI
+              DropdownButtonFormField<String>(
+                value: _selectedCity,
+                decoration: const InputDecoration(
+                  labelText: 'Şehriniz',
+                  prefixIcon: Icon(Icons.location_city_outlined),
+                ),
+                items: AppConstants.turkiyeSehirleri.map((city) {
+                  return DropdownMenuItem(value: city, child: Text(city));
+                }).toList(),
+                onChanged: (val) => setState(() => _selectedCity = val),
+              ),
+              
+              const SizedBox(height: 16),
+              TextField(
+                controller: _bioController,
+                maxLines: 3,
+                maxLength: 150,
+                decoration: const InputDecoration(
+                  labelText: 'Hakkımda', 
+                  prefixIcon: Icon(Icons.info_outline),
+                  alignLabelWithHint: true,
+                ),
               ),
               const SizedBox(height: 40),
               SizedBox(
