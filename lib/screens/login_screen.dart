@@ -3,7 +3,6 @@ import 'package:animate_do/animate_do.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:rentgo/core/auth_service.dart';
-import 'package:rentgo/screens/phone_auth_screen.dart';
 import 'package:rentgo/screens/signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -64,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
+          // PREMIUM GRADYAN ARKA PLAN
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -87,6 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // MODERN LOGO
                     FadeInDown(
                       duration: const Duration(milliseconds: 1000),
                       child: Container(
@@ -117,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 50),
 
+                    // CAM EFEKTLİ GİRİŞ ALANLARI
                     ClipRRect(
                       borderRadius: BorderRadius.circular(24),
                       child: BackdropFilter(
@@ -140,7 +142,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               else
                                 ElevatedButton(
                                   onPressed: _loginWithEmail,
-                                  child: const Text('Giriş Yap', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blueAccent,
+                                    shadowColor: Colors.blueAccent.withAlpha(100),
+                                    elevation: 10,
+                                    minimumSize: const Size.fromHeight(56),
+                                  ),
+                                  child: const Text('Giriş Yap', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                                 ),
                             ],
                           ),
@@ -150,27 +158,33 @@ class _LoginScreenState extends State<LoginScreen> {
                     
                     const SizedBox(height: 40),
                     
+                    // SADECE GOOGLE GİRİŞİ KALDI
                     FadeInUp(
                       delay: const Duration(milliseconds: 400),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _SocialButton(
-                            icon: 'assets/google_logo.png', 
-                            onTap: _loginWithGoogle,
-                            isAsset: true,
+                      child: GestureDetector(
+                        onTap: _loginWithGoogle,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(5),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withAlpha(10)),
                           ),
-                          const SizedBox(width: 20),
-                          _SocialButton(
-                            iconPath: Icons.phone_iphone_rounded, // DÜZELTİLDİ: Tip uyumu sağlandı
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PhoneAuthScreen())),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset('assets/google_logo.png', height: 24, errorBuilder: (c, e, s) => const Icon(Icons.g_mobiledata, color: Colors.white, size: 24)),
+                              const SizedBox(width: 12),
+                              const Text('Google ile Devam Et', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                     
                     const SizedBox(height: 40),
                     
+                    // KAYİT OLMA ALANI
                     FadeInUp(
                       delay: const Duration(milliseconds: 600),
                       child: Row(
@@ -190,29 +204,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final dynamic icon; 
-  final IconData? iconPath; // DÜZELTİLDİ: String? yerine IconData? yapıldı
-  final VoidCallback onTap; 
-  final bool isAsset;
-  
-  const _SocialButton({this.icon, this.iconPath, required this.onTap, this.isAsset = false});
-  
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white.withAlpha(5), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withAlpha(10))),
-        child: isAsset 
-          ? Image.asset(icon, height: 24, errorBuilder: (c, e, s) => const Icon(Icons.g_mobiledata, color: Colors.white, size: 24))
-          : Icon(iconPath, color: Colors.white, size: 24),
       ),
     );
   }

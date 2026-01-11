@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rentgo/core/firestore_service.dart';
+import 'package:rentgo/core/notification_service.dart'; // EKLENDİ
 import 'package:rentgo/models/message.dart';
 import 'package:intl/intl.dart';
 
@@ -37,14 +38,23 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    // Sayfa açıldığında mesajları okundu yap
+    // BİLDİRİM FİLTRESİ: Bu odayı aktif yap
+    NotificationService.activeRoomId = widget.roomId;
     _markAsRead();
+  }
+
+  @override
+  void dispose() {
+    // BİLDİRİM FİLTRESİ: Odadan çıkınca sıfırla
+    NotificationService.activeRoomId = null;
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _markAsRead() {
     final user = Provider.of<User?>(context, listen: false);
     if (user != null) {
-      // KARŞI TARAFIN gönderdiği mesajları okundu yapıyoruz
       _firestoreService.markMessagesAsRead(widget.roomId, user.uid);
     }
   }
@@ -73,13 +83,6 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hata: $e')));
     }
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
   }
 
   @override
@@ -150,8 +153,6 @@ class _ChatScreenState extends State<ChatScreen> {
               stream: _firestoreService.getMessages(widget.roomId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-                
-                // Ekran açıkken yeni mesaj gelirse onu da anında okundu yap
                 if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) => _markAsRead());
                 }
@@ -270,7 +271,6 @@ class _MessageBubble extends StatelessWidget {
                 ),
                 if (isMe) ...[
                   const SizedBox(height: 2),
-                  // TİKLERİN RENGİ VE ŞEKLİ WHATSAPP TARZI YAPILDI
                   Icon(
                     message.isRead ? Icons.done_all : Icons.done,
                     size: 16,

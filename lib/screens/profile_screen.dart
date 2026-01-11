@@ -9,7 +9,6 @@ import 'package:rentgo/screens/active_bookings_screen.dart';
 import 'package:rentgo/screens/chat_list_screen.dart';
 import 'package:rentgo/screens/edit_profile_screen.dart';
 import 'package:rentgo/screens/favorites_screen.dart';
-import 'package:rentgo/screens/invoices_screen.dart';
 import '../core/app_state.dart';
 import '../models/review.dart';
 import '../models/booking.dart';
@@ -31,21 +30,17 @@ class ProfileScreen extends StatelessWidget {
         stream: firestoreService.getUserProfileStream(user.uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            firestoreService.createUserProfile(user);
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final userData = snapshot.data!.data()!;
+          
+          final userData = snapshot.data?.data() ?? {};
           final displayName = userData['displayName'] ?? 'Kullanıcı';
           final photoURL = userData['photoURL'];
           final bio = userData['bio'] ?? '';
           final city = userData['city'] ?? 'Şehir Seçilmedi';
           final isVerified = userData['isPhoneVerified'] ?? false;
+          final int unreadCount = userData['unreadCount'] ?? 0;
 
           return CustomScrollView(
             slivers: [
-              // PREMIUM HEADER
               SliverAppBar(
                 expandedHeight: 300,
                 pinned: true,
@@ -99,32 +94,40 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
 
-              // İSTATİSTİKLER VE MENÜ
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      // İSTATİSTİK PANELI
-                      FadeInUp(child: _buildStatsBar(firestoreService, user.uid, isVerified)),
-                      
+                      _buildStatsBar(firestoreService, user.uid, isVerified),
                       const SizedBox(height: 32),
                       
                       if (bio.isNotEmpty) ...[
-                        FadeInUp(
-                          delay: const Duration(milliseconds: 200),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(16)),
-                            child: Text(bio, textAlign: TextAlign.center, style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.white70)),
-                          ),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(16)),
+                          child: Text(bio, textAlign: TextAlign.center, style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.white70)),
                         ),
                         const SizedBox(height: 24),
                       ],
 
-                      // MENÜ LİSTESİ
-                      _buildMenuSection(context, user),
+                      Column(
+                        children: [
+                          _ProfileTile(icon: Icons.directions_car_outlined, title: 'İlanlarım', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyListingsScreen()))),
+                          _ProfileTile(icon: Icons.favorite_border, title: 'Favorilerim', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))),
+                          _ProfileTile(icon: Icons.history_rounded, title: 'Rezervasyonlarım', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ActiveBookingsScreen()))),
+                          _ProfileTile(icon: Icons.chat_bubble_outline, title: 'Mesajlarım', hasBadge: unreadCount > 0, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen()))),
+                          
+                          // FATURA BUTONU KALDIRILDI, YERİNE PREMIUM BUTONU EKLENEBİLİR
+                          _ProfileTile(icon: Icons.workspace_premium_rounded, title: 'Vroomy Premium', onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Premium özellikler yakında sizlerle!')));
+                          }),
+                          
+                          const SizedBox(height: 12),
+                          _ProfileTile(icon: Icons.logout, title: 'Çıkış Yap', isDanger: true, onTap: () => context.read<AuthService>().signOut()),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -139,11 +142,7 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildStatsBar(FirestoreService service, String uid, bool isVerified) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 15),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withAlpha(10)),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withAlpha(10))),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -196,28 +195,11 @@ class ProfileScreen extends StatelessWidget {
       },
     );
   }
-
-  Widget _buildMenuSection(BuildContext context, User user) {
-    return FadeInUp(
-      delay: const Duration(milliseconds: 400),
-      child: Column(
-        children: [
-          _ProfileTile(icon: Icons.directions_car_outlined, title: 'İlanlarım', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyListingsScreen()))),
-          _ProfileTile(icon: Icons.favorite_border, title: 'Favorilerim', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))),
-          _ProfileTile(icon: Icons.sync_alt_outlined, title: 'İşlemlerim', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ActiveBookingsScreen()))),
-          _ProfileTile(icon: Icons.chat_bubble_outline, title: 'Mesajlarım', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen()))),
-          _ProfileTile(icon: Icons.receipt_long_outlined, title: 'Faturalarım', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoicesScreen()))),
-          const SizedBox(height: 12),
-          _ProfileTile(icon: Icons.logout, title: 'Çıkış Yap', isDanger: true, onTap: () => context.read<AuthService>().signOut()),
-        ],
-      ),
-    );
-  }
 }
 
 class _ProfileTile extends StatelessWidget {
-  final IconData icon; final String title; final bool isDanger; final VoidCallback onTap;
-  const _ProfileTile({required this.icon, required this.title, this.isDanger = false, required this.onTap});
+  final IconData icon; final String title; final bool isDanger; final bool hasBadge; final VoidCallback onTap;
+  const _ProfileTile({required this.icon, required this.title, this.isDanger = false, this.hasBadge = false, required this.onTap});
   @override
   Widget build(BuildContext context) {
     final color = isDanger ? Colors.redAccent : Colors.blueAccent;
@@ -226,7 +208,15 @@ class _ProfileTile extends StatelessWidget {
       decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withAlpha(5))),
       child: ListTile(
         leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: color.withAlpha(20), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: color, size: 20)),
-        title: Text(title, style: TextStyle(color: isDanger ? Colors.redAccent : Colors.white, fontWeight: FontWeight.w500)),
+        title: Row(
+          children: [
+            Text(title, style: TextStyle(color: isDanger ? Colors.redAccent : Colors.white, fontWeight: FontWeight.w500)),
+            if (hasBadge) ...[
+              const SizedBox(width: 8),
+              Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle)),
+            ],
+          ],
+        ),
         trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
         onTap: onTap,
       ),

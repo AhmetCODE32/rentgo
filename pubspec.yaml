@@ -23,7 +23,11 @@ dependencies:
   shimmer: ^3.0.0
   animate_do: ^3.3.4
   cached_network_image: ^3.3.1
-  url_launcher: ^6.3.0 # ONARILDI: Yol tarifi desteği
+  google_maps_flutter: ^2.7.0
+  url_launcher: ^6.3.0
+  firebase_messaging: ^14.9.4
+  flutter_local_notifications: ^17.1.2
+  share_plus: ^10.0.0 # DÜZELTİLDİ: Sürüm çakışmasını çözmek için 10.0.0 yapıldı
 
 dev_dependencies:
   flutter_test:

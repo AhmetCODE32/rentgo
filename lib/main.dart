@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rentgo/core/app_state.dart';
 import 'package:rentgo/core/auth_service.dart';
+import 'package:rentgo/core/notification_service.dart';
 import 'package:rentgo/screens/onboarding_screen.dart';
 import 'package:rentgo/screens/main_screen.dart'; 
 import 'dart:developer' as dev;
@@ -12,8 +13,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp();
+    await NotificationService().initialize();
   } catch (e) {
-    dev.log("Firebase başlatılırken bir uyarı oluştu: $e");
+    dev.log("Başlatma sırasında bir uyarı oluştu: $e");
   }
   runApp(const MyApp());
 }
@@ -35,7 +37,6 @@ class MyApp extends StatelessWidget {
       child: Consumer<User?>(
         builder: (context, user, child) {
           return MaterialApp(
-            // KEY KULLANIMI: Kullanıcı değiştiğinde tüm navigasyonu ve uygulamayı resetler (Çık-Gir sorununu çözer)
             key: ValueKey(user?.uid ?? 'logged_out'),
             title: 'Vroomy',
             debugShowCheckedModeBanner: false,
@@ -60,10 +61,10 @@ class MyApp extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               ),
+              // DÜZELTİLDİ: 'const' kaldırıldı, hata giderildi
               inputDecorationTheme: InputDecorationTheme(
                 filled: true,
                 fillColor: const Color(0xFF0F172A),
-                // DÜZELTİLDİ: Const hatası kaldırıldı
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
@@ -73,5 +74,20 @@ class MyApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<User?>();
+
+    if (user == null) {
+      return const OnboardingScreen();
+    }
+    
+    return const MainScreen(); 
   }
 }

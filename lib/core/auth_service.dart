@@ -8,7 +8,45 @@ class AuthService {
 
   Stream<User?> get user => _auth.authStateChanges();
 
-  // --- TELEFON İLE GİRİŞ ---
+  // --- TELEFON İLE DOĞRULAMA (MEVCUT HESABA BAĞLAMA) ---
+  Future<void> linkPhoneNumber({
+    required String phoneNumber,
+    required void Function(FirebaseAuthException) verificationFailed,
+    required void Function(String, int?) codeSent,
+  }) async {
+    await _auth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        // Otomatik doğrulama olursa hesaba bağla
+        final user = _auth.currentUser;
+        if (user != null) {
+          await user.linkWithCredential(credential);
+          await _firestoreService.updateUserProfile(user.uid, isPhoneVerified: true);
+        }
+      },
+      verificationFailed: verificationFailed,
+      codeSent: codeSent,
+      codeAutoRetrievalTimeout: (String verificationId) {},
+    );
+  }
+
+  Future<User?> verifyAndLinkSmsCode(String verificationId, String smsCode) async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    final credential = PhoneAuthProvider.credential(verificationId: verificationId, smsCode: smsCode);
+    
+    // MEVCUT HESABI TELEFONLA MÜHÜRLE (Link)
+    final result = await user.linkWithCredential(credential);
+    final updatedUser = result.user;
+    
+    if (updatedUser != null) {
+      await _firestoreService.updateUserProfile(updatedUser.uid, isPhoneVerified: true);
+    }
+    return updatedUser;
+  }
+
+  // --- TELEFON İLE GİRİŞ (ESKİ METOTLAR) ---
   Future<void> verifyPhoneNumber({
     required String phoneNumber,
     required void Function(PhoneAuthCredential) verificationCompleted,

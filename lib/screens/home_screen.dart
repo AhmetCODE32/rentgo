@@ -19,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   String _selectedCategory = 'Hepsi';
   String _selectedCity = 'Tüm Türkiye';
-  String _sortBy = 'En Yeni'; // VARSAYILAN SIRALAMA
+  String _sortBy = 'En Yeni';
 
   @override
   Widget build(BuildContext context) {
@@ -27,12 +27,25 @@ class _HomeScreenState extends State<HomeScreen> {
     final firestoreService = FirestoreService();
     
     return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(user),
-            _buildSearchRow(), // ARAMA VE SIRALAMA YAN YANA
+            // ÜST KISIM (PROFİL VERİSİ ARTIK CANLI GELİYOR)
+            if (user != null) 
+              StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                stream: firestoreService.getUserProfileStream(user.uid),
+                builder: (context, snapshot) {
+                  final userData = snapshot.data?.data();
+                  return _buildHeader(userData);
+                },
+              )
+            else
+              _buildHeader(null),
+
+            _buildSearchRow(),
             _buildCategories(),
+            
             Expanded(
               child: StreamBuilder<QuerySnapshot<Vehicle>>(
                 stream: firestoreService.getVehiclesStream(),
@@ -42,7 +55,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   final allVehicles = snapshot.data!.docs.map((d) => d.data()).toList();
                   
-                  // 1. FİLTRELEME MANTIĞI
                   List<Vehicle> filteredVehicles = allVehicles.where((v) {
                     final matchesSearch = v.title.toLowerCase().contains(_searchQuery.toLowerCase());
                     final matchesCategory = _selectedCategory == 'Hepsi' || v.category == _selectedCategory;
@@ -50,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     return matchesSearch && matchesCategory && matchesCity;
                   }).toList();
 
-                  // 2. SIRALAMA MANTIĞI (YENİ)
                   if (_sortBy == 'Fiyat (Artan)') {
                     filteredVehicles.sort((a, b) => a.price.compareTo(b.price));
                   } else if (_sortBy == 'Fiyat (Azalan)') {
@@ -75,7 +86,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(User? user) {
+  Widget _buildHeader(Map<String, dynamic>? userData) {
+    final String displayName = userData?['displayName'] ?? 'Sürücü';
+    final String? photoURL = userData?['photoURL'];
+
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
       child: Row(
@@ -99,17 +113,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  user != null ? 'Selam, ${user.displayName?.split(' ').first ?? 'Sürücü'} 👋' : 'Hoş Geldin!',
+                  'Selam, ${displayName.split(' ').first} 👋',
                   style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ],
             ),
           ),
+          // ARTIK BU RESİM ANLIK OLARAK DEĞİŞECEK!
           CircleAvatar(
             radius: 24,
             backgroundColor: Colors.blueAccent.withAlpha(30),
-            backgroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
-            child: user?.photoURL == null ? const Icon(Icons.person, color: Colors.blueAccent) : null,
+            backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
+            child: photoURL == null ? const Icon(Icons.person, color: Colors.blueAccent) : null,
           ),
         ],
       ),
@@ -121,18 +136,14 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
       child: Row(
         children: [
-          // ARAMA ÇUBUĞU
           Expanded(
             child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(16),
-              ),
+              decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(16)),
               child: TextField(
                 onChanged: (v) => setState(() => _searchQuery = v),
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'Ara...',
+                  hintText: 'Hangi aracı arıyorsun?',
                   hintStyle: TextStyle(color: Colors.white.withAlpha(80)),
                   prefixIcon: const Icon(Icons.search, color: Colors.blueAccent, size: 20),
                   border: InputBorder.none,
@@ -142,16 +153,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          // SIRALAMA BUTONU
           GestureDetector(
             onTap: _showSortPicker,
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blueAccent.withAlpha(30),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.blueAccent.withAlpha(50)),
-              ),
+              decoration: BoxDecoration(color: Colors.blueAccent.withAlpha(30), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blueAccent.withAlpha(50))),
               child: const Icon(Icons.swap_vert_rounded, color: Colors.blueAccent),
             ),
           ),
@@ -163,20 +169,24 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCategories() {
     final categories = ['Hepsi', 'Araba', 'Motor', 'Karavan', 'Bisiklet', 'Scooter', 'Ticari'];
     final icons = [Icons.grid_view_rounded, Icons.directions_car_rounded, Icons.motorcycle_rounded, Icons.rv_hookup_rounded, Icons.pedal_bike_rounded, Icons.electric_scooter_rounded, Icons.local_shipping_rounded];
-
     return Column(
       children: [
-        SizedBox(
-          height: 45,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: categories.length,
-            itemBuilder: (context, index) => _buildCategoryItem(categories[index], icons[index]),
-          ),
-        ),
+        SizedBox(height: 45, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: categories.length, itemBuilder: (context, index) => _buildCategoryItem(categories[index], icons[index]))),
         const SizedBox(height: 20),
       ],
+    );
+  }
+
+  Widget _buildCategoryItem(String title, IconData icon) {
+    final isSelected = _selectedCategory == title;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedCategory = title),
+      child: Container(
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(color: isSelected ? Colors.blueAccent : const Color(0xFF1E293B), borderRadius: BorderRadius.circular(25), border: Border.all(color: isSelected ? Colors.blueAccent : Colors.white10)),
+        child: Row(children: [Icon(icon, size: 18, color: isSelected ? Colors.white : Colors.blueAccent), const SizedBox(width: 8), Text(title, style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontWeight: FontWeight.bold))]),
+      ),
     );
   }
 
@@ -192,41 +202,11 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Padding(padding: EdgeInsets.all(16), child: Text('Sıralama', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white))),
             const Divider(color: Colors.white10),
-            ...options.map((opt) => ListTile(
-              title: Text(opt, style: TextStyle(color: _sortBy == opt ? Colors.blueAccent : Colors.white)),
-              trailing: _sortBy == opt ? const Icon(Icons.check, color: Colors.blueAccent) : null,
-              onTap: () {
-                setState(() => _sortBy = opt);
-                Navigator.pop(context);
-              },
-            )),
+            ...options.map((opt) => ListTile(title: Text(opt, style: TextStyle(color: _sortBy == opt ? Colors.blueAccent : Colors.white)), trailing: _sortBy == opt ? const Icon(Icons.check, color: Colors.blueAccent) : null, onTap: () { setState(() => _sortBy = opt); Navigator.pop(context); })),
             const SizedBox(height: 20),
           ],
         );
       },
-    );
-  }
-
-  Widget _buildCategoryItem(String title, IconData icon) {
-    final isSelected = _selectedCategory == title;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedCategory = title),
-      child: Container(
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.blueAccent : const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: isSelected ? Colors.blueAccent : Colors.white10),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: isSelected ? Colors.white : Colors.blueAccent),
-            const SizedBox(width: 8),
-            Text(title, style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
     );
   }
 
@@ -237,58 +217,11 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         final allCities = ['Tüm Türkiye', ...AppConstants.turkiyeSehirleri];
-        return Column(
-          children: [
-            const Padding(padding: EdgeInsets.all(16), child: Text('Şehir Seçin', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white))),
-            const Divider(color: Colors.white10),
-            Expanded(
-              child: ListView.builder(
-                itemCount: allCities.length,
-                itemBuilder: (context, index) {
-                  final city = allCities[index];
-                  return ListTile(
-                    title: Text(city, style: TextStyle(color: _selectedCity == city ? Colors.blueAccent : Colors.white)),
-                    trailing: _selectedCity == city ? const Icon(Icons.check, color: Colors.blueAccent) : null,
-                    onTap: () {
-                      setState(() => _selectedCity = city);
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        );
+        return Column(children: [const Padding(padding: EdgeInsets.all(16), child: Text('Şehir Seçin', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white))), const Divider(color: Colors.white10), Expanded(child: ListView.builder(itemCount: allCities.length, itemBuilder: (context, index) { final city = allCities[index]; return ListTile(title: Text(city, style: TextStyle(color: _selectedCity == city ? Colors.blueAccent : Colors.white)), trailing: _selectedCity == city ? const Icon(Icons.check, color: Colors.blueAccent) : null, onTap: () { setState(() => _selectedCity = city); Navigator.pop(context); }); }))]);
       },
     );
   }
 
-  Widget _buildLoadingList() {
-    return Shimmer.fromColors(
-      baseColor: Colors.white10,
-      highlightColor: Colors.white24,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: 3,
-        itemBuilder: (context, index) => Container(
-          height: 220,
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search_off_rounded, size: 80, color: Colors.white.withAlpha(20)),
-          const SizedBox(height: 16),
-          const Text('Aradığın araç bulunamadı.', style: TextStyle(color: Colors.white70, fontSize: 16)),
-        ],
-      ),
-    );
-  }
+  Widget _buildLoadingList() => Shimmer.fromColors(baseColor: Colors.white10, highlightColor: Colors.white24, child: ListView.builder(padding: const EdgeInsets.symmetric(horizontal: 20), itemCount: 3, itemBuilder: (context, index) => Container(height: 220, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))));
+  Widget _buildEmptyState() => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.search_off_rounded, size: 80, color: Colors.white.withAlpha(20)), const SizedBox(height: 16), const Text('Aradığın araç bulunamadı.', style: TextStyle(color: Colors.white70, fontSize: 16))]));
 }
