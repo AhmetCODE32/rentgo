@@ -35,7 +35,47 @@ class FirestoreService {
         );
   }
 
-  // --- USER PROFILE METHODS (GÜNCELLENDİ: phoneNumber eklendi) ---
+  // --- PREMIUM & BOOST & VIEWS ---
+  Future<void> incrementVehicleViews(String vehicleId) {
+    return _db.collection('vehicles').doc(vehicleId).update({
+      'views': FieldValue.increment(1),
+    });
+  }
+
+  Future<void> upgradeToPremium(String uid) async {
+    final now = DateTime.now();
+    final expiryDate = now.add(const Duration(days: 30));
+    return _usersRef.doc(uid).update({
+      'isPremium': true,
+      'premiumStartDate': Timestamp.fromDate(now),
+      'premiumExpiryDate': Timestamp.fromDate(expiryDate),
+      'boostCount': 5,
+    });
+  }
+
+  Future<void> cancelPremium(String uid) {
+    return _usersRef.doc(uid).update({
+      'isPremium': false,
+      'premiumExpiryDate': FieldValue.delete(),
+      'boostCount': 0,
+    });
+  }
+
+  Future<bool> boostVehicle(String vehicleId, String userId) async {
+    final userDoc = await _usersRef.doc(userId).get();
+    final userData = userDoc.data() ?? {};
+    final int currentBoosts = userData['boostCount'] ?? 0;
+    final bool isPremium = userData['isPremium'] ?? false;
+    if (!isPremium || currentBoosts <= 0) return false;
+    await _vehiclesRef.doc(vehicleId).update({
+      'isBoosted': true,
+      'boostExpiresAt': Timestamp.fromDate(DateTime.now().add(const Duration(hours: 24))),
+    });
+    await _usersRef.doc(userId).update({'boostCount': currentBoosts - 1});
+    return true;
+  }
+
+  // --- USER PROFILE METHODS ---
   Future<void> updateUserProfile(String uid, {String? displayName, String? photoURL, String? bio, String? city, bool? isPhoneVerified, String? phoneNumber}) {
     final Map<String, dynamic> dataToUpdate = {};
     if (displayName != null) dataToUpdate['displayName'] = displayName;
@@ -59,6 +99,9 @@ class FirestoreService {
       'photoURL': user.photoURL,
       'bio': '',
       'city': 'Kilis',
+      'isPremium': false,
+      'boostCount': 0,
+      'createdAt': FieldValue.serverTimestamp(),
       'phoneNumber': user.phoneNumber ?? '',
       'isPhoneVerified': user.phoneNumber != null && user.phoneNumber!.isNotEmpty,
       'isOnline': true,
@@ -67,13 +110,13 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
-  Stream<DocumentSnapshot<Map<String, dynamic>>> getUserProfileStream(String uid) => _usersRef.doc(uid).snapshots();
-
-  // --- DİĞER METOTLAR ---
   Future<void> updateUserStatus(String uid, bool isOnline) {
     return _usersRef.doc(uid).update({'isOnline': isOnline, 'lastSeen': FieldValue.serverTimestamp()});
   }
 
+  Stream<DocumentSnapshot<Map<String, dynamic>>> getUserProfileStream(String uid) => _usersRef.doc(uid).snapshots();
+
+  // --- MESSAGING ---
   Future<void> markMessagesAsRead(String roomId, String userId) async {
     await _usersRef.doc(userId).update({'unreadCount': 0, 'lastNotification': null});
     final messages = await _chatsRef.doc(roomId).collection('messages').where('senderId', isNotEqualTo: userId).where('isRead', isEqualTo: false).get();
@@ -93,6 +136,7 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getChatRooms(String userId) => _chatsRef.where('users', arrayContains: userId).orderBy('lastMessageTime', descending: true).snapshots();
   Stream<QuerySnapshot<Map<String, dynamic>>> getMessages(String roomId) => _chatsRef.doc(roomId).collection('messages').orderBy('createdAt', descending: true).snapshots();
+  
   Future<void> toggleFavorite(String userId, String vehicleId) async {
     final favRef = _usersRef.doc(userId).collection('favorites').doc(vehicleId);
     final doc = await favRef.get();

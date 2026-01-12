@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rentgo/core/firestore_service.dart';
-import 'package:rentgo/core/notification_service.dart'; // EKLENDİ
+import 'package:rentgo/core/notification_service.dart';
 import 'package:rentgo/models/message.dart';
 import 'package:intl/intl.dart';
 
@@ -38,14 +38,12 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    // BİLDİRİM FİLTRESİ: Bu odayı aktif yap
     NotificationService.activeRoomId = widget.roomId;
     _markAsRead();
   }
 
   @override
   void dispose() {
-    // BİLDİRİM FİLTRESİ: Odadan çıkınca sıfırla
     NotificationService.activeRoomId = null;
     _messageController.dispose();
     _scrollController.dispose();
@@ -59,12 +57,12 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _sendMessage() async {
+  void _sendMessage([String? quickText]) async {
     final user = Provider.of<User?>(context, listen: false);
-    if (user == null || _messageController.text.trim().isEmpty) return;
+    final text = quickText ?? _messageController.text.trim();
+    if (user == null || text.isEmpty) return;
 
-    final text = _messageController.text.trim();
-    _messageController.clear();
+    if (quickText == null) _messageController.clear();
 
     try {
       await _firestoreService.sendMessage(
@@ -102,16 +100,21 @@ class _ChatScreenState extends State<ChatScreen> {
             final photoURL = otherUserData?['photoURL'];
             final displayName = otherUserData?['displayName'] ?? 'Yükleniyor...';
             final isOnline = otherUserData?['isOnline'] ?? false;
+            final bool isPremium = otherUserData?['isPremium'] ?? false;
 
             return Row(
               children: [
                 Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.blueAccent.withAlpha(30),
-                      backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
-                      child: photoURL == null ? Text(displayName[0].toUpperCase(), style: const TextStyle(fontSize: 14, color: Colors.blueAccent)) : null,
+                    Container(
+                      padding: const EdgeInsets.all(1),
+                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isPremium ? Colors.amber : Colors.transparent, width: 1)),
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.blueAccent.withAlpha(30),
+                        backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
+                        child: photoURL == null ? Text(displayName[0].toUpperCase(), style: const TextStyle(fontSize: 14, color: Colors.blueAccent)) : null,
+                      ),
                     ),
                     Positioned(
                       right: 0,
@@ -133,7 +136,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(displayName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                      Row(
+                        children: [
+                          Text(displayName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                          if (isPremium) ...[
+                            const SizedBox(width: 4),
+                            const Icon(Icons.workspace_premium, color: Colors.amber, size: 12),
+                          ],
+                        ],
+                      ),
                       Text(
                         isOnline ? 'Çevrimiçi' : 'Çevrimdışı',
                         style: TextStyle(fontSize: 11, color: isOnline ? Colors.greenAccent : Colors.white.withAlpha(50)),
@@ -187,9 +198,48 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
+          _buildQuickActions(user!.uid),
           _buildMessageInput(),
         ],
       ),
+    );
+  }
+
+  Widget _buildQuickActions(String uid) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _firestoreService.getUserProfileStream(uid),
+      builder: (context, snapshot) {
+        final isPremium = snapshot.data?.data()?['isPremium'] ?? false;
+        if (!isPremium) return const SizedBox.shrink();
+
+        final quickMessages = [
+          'Hala kiralık mı?',
+          'Fiyatta indirim olur mu?',
+          'Konum atar mısınız?',
+          'Ne zaman görebilirim?',
+        ];
+
+        return Container(
+          height: 50,
+          padding: const EdgeInsets.only(bottom: 8),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: quickMessages.length,
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ActionChip(
+                  label: Text(quickMessages[index], style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold)),
+                  backgroundColor: Colors.amber.withOpacity(0.1),
+                  side: BorderSide(color: Colors.amber.withOpacity(0.3)),
+                  onPressed: () => _sendMessage(quickMessages[index]),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -221,7 +271,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(width: 12),
           GestureDetector(
-            onTap: _sendMessage,
+            onTap: () => _sendMessage(),
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: const BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),

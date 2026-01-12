@@ -28,6 +28,11 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   @override
   void initState() {
     super.initState();
+    // KONTROL: İlan görüntülendiğinde izlenme sayısını artır
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<FirestoreService>().incrementVehicleViews(widget.vehicle.id!);
+    });
+
     _pageController.addListener(() {
       if(_pageController.hasClients) {
         setState(() => _activePage = _pageController.page!.round());
@@ -41,7 +46,6 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     super.dispose();
   }
 
-  // PAYLAŞMA FONKSİYONU (TAMİR EDİLDİ)
   Future<void> _shareVehicle() async {
     try {
       final priceFormatter = NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0);
@@ -101,7 +105,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   Widget build(BuildContext context) {
     final user = Provider.of<User?>(context);
     final isMyVehicle = user != null && user.uid == widget.vehicle.userId;
-    final firestoreService = FirestoreService();
+    final firestoreService = context.read<FirestoreService>();
     
     final hasImages = widget.vehicle.images.isNotEmpty;
     final priceFormatter = NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0);
@@ -210,28 +214,80 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   }
 
   Widget _buildSellerCard(BuildContext context, FirestoreService service) {
-    return InkWell(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OtherUserProfileScreen(userId: widget.vehicle.userId, userName: widget.vehicle.sellerName))),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withAlpha(10))),
-        child: Row(
-          children: [
-            CircleAvatar(radius: 25, backgroundColor: Colors.blueAccent, child: Text(widget.vehicle.sellerName[0].toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.vehicle.sellerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                  const Text('Doğrulanmış Satıcı', style: TextStyle(color: Colors.blueAccent, fontSize: 12)),
-                ],
-              ),
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: service.getUserProfileStream(widget.vehicle.userId),
+      builder: (context, snapshot) {
+        final userData = snapshot.data?.data() ?? {};
+        final bool isPremium = userData['isPremium'] ?? false;
+        final String? photoURL = userData['photoURL'];
+        final String displayName = userData['displayName'] ?? widget.vehicle.sellerName;
+        final Timestamp? createdAt = userData['createdAt'] as Timestamp?;
+        
+        // GÜVEN: Üyelik Süresi Hesaplama
+        String memberSince = 'Yeni Üye';
+        if (createdAt != null) {
+          final diff = DateTime.now().difference(createdAt.toDate());
+          if (diff.inDays > 365) {
+            memberSince = '${(diff.inDays / 365).floor()} yıldır üye';
+          } else if (diff.inDays > 30) {
+            memberSince = '${(diff.inDays / 30).floor()} aydır üye';
+          } else {
+            memberSince = '${diff.inDays} gündür üye';
+          }
+        }
+
+        return InkWell(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OtherUserProfileScreen(userId: widget.vehicle.userId, userName: displayName))),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B), 
+              borderRadius: BorderRadius.circular(20), 
+              border: Border.all(color: isPremium ? Colors.amber.withOpacity(0.3) : Colors.white.withAlpha(10)),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-          ],
-        ),
-      ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isPremium ? Colors.amber : Colors.transparent, width: 2)),
+                  child: CircleAvatar(
+                    radius: 25, 
+                    backgroundColor: Colors.blueAccent, 
+                    backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
+                    child: photoURL == null ? Text(displayName[0].toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)) : null,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                          if (isPremium) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(4)),
+                              child: const Text('PRO', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        isPremium ? 'Vroomy Pro Satıcı • $memberSince' : 'Doğrulanmış Satıcı • $memberSince', 
+                        style: TextStyle(color: isPremium ? Colors.amber : Colors.blueAccent, fontSize: 12, fontWeight: isPremium ? FontWeight.bold : FontWeight.normal),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              ],
+            ),
+          ),
+        );
+      }
     );
   }
 

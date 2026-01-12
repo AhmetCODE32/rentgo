@@ -39,6 +39,21 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> with Si
     super.dispose();
   }
 
+  // ÜYELİK SÜRESİ HESAPLAMA FONKSİYONU
+  String _getMemberSince(Timestamp? createdAt) {
+    if (createdAt == null) return 'Yeni Üye';
+    final diff = DateTime.now().difference(createdAt.toDate());
+    if (diff.inDays > 365) {
+      return '${(diff.inDays / 365).floor()} yıldır üye';
+    } else if (diff.inDays > 30) {
+      return '${(diff.inDays / 30).floor()} aydır üye';
+    } else if (diff.inDays > 0) {
+      return '${diff.inDays} gündür üye';
+    } else {
+      return 'Bugün katıldı';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,16 +65,21 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> with Si
           if (!snapshot.hasData || !snapshot.data!.exists) return const Center(child: Text('Kullanıcı bulunamadı.', style: TextStyle(color: Colors.white)));
 
           final userData = snapshot.data!.data()!;
-          final photoURL = userData['photoURL'];
-          final bio = userData['bio'] ?? '';
-          final city = userData['city'] ?? 'Belirtilmemiş';
-          final isVerified = userData['isPhoneVerified'] ?? false;
+          final bool isPremium = userData['isPremium'] ?? false;
+          final String? photoURL = userData['photoURL'];
+          final String city = userData['city'] ?? 'Belirtilmemiş';
+          final bool isVerified = userData['isPhoneVerified'] ?? false;
+          final Timestamp? createdAt = userData['createdAt'] as Timestamp?;
+
+          final bgGradient = isPremium 
+              ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFB8860B), Color(0xFF0F172A)])
+              : const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF2563EB), Color(0xFF0F172A)]);
 
           return NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverAppBar(
-                  expandedHeight: 340,
+                  expandedHeight: 380, // Biraz daha yükselttim
                   floating: false,
                   pinned: true,
                   backgroundColor: const Color(0xFF1E293B),
@@ -67,38 +87,32 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> with Si
                     background: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [Color(0xFF2563EB), Color(0xFF0F172A)],
-                            ),
-                          ),
-                        ),
+                        Container(decoration: BoxDecoration(gradient: bgGradient)),
+                        if (isPremium) Positioned(top: 60, right: -20, child: Icon(Icons.star_rounded, size: 200, color: Colors.amber.withOpacity(0.1))),
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const SizedBox(height: 40),
-                            CircleAvatar(
-                              radius: 55,
-                              backgroundColor: Colors.white.withAlpha(20),
-                              child: CircleAvatar(
-                                radius: 50,
-                                backgroundImage: photoURL != null ? CachedNetworkImageProvider(photoURL) : null,
-                                child: photoURL == null ? Text(widget.userName[0].toUpperCase(), style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)) : null,
-                              ),
-                            ),
+                            const SizedBox(height: 60),
+                            _buildAvatar(photoURL, widget.userName, isPremium),
                             const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(widget.userName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                                if (isVerified) const SizedBox(width: 8),
-                                if (isVerified) const Icon(Icons.verified, color: Colors.greenAccent, size: 20),
-                              ],
-                            ),
+                            _buildNameSection(widget.userName, isVerified, isPremium),
                             const SizedBox(height: 8),
+                            
+                            // ÜYELİK SÜRESİ ETİKETİ
+                            Text(
+                              _getMemberSince(createdAt),
+                              style: TextStyle(color: isPremium ? Colors.amber.shade200 : Colors.white60, fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                            
+                            const SizedBox(height: 12),
+                            if (isPremium) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(color: Colors.black.withOpacity(0.3), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.amber.withOpacity(0.5))),
+                                child: const Text('VROOMY PRO ÜYESİ', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 10)),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -108,7 +122,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> with Si
                               ],
                             ),
                             const SizedBox(height: 20),
-                            _buildStatsBar(widget.userId, isVerified),
+                            _buildStatsBar(widget.userId, isVerified, isPremium),
                           ],
                         ),
                       ],
@@ -120,9 +134,9 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> with Si
                   delegate: _SliverAppBarDelegate(
                     TabBar(
                       controller: _tabController,
-                      labelColor: Colors.blueAccent,
+                      labelColor: isPremium ? Colors.amber : Colors.blueAccent,
                       unselectedLabelColor: Colors.grey,
-                      indicatorColor: Colors.blueAccent,
+                      indicatorColor: isPremium ? Colors.amber : Colors.blueAccent,
                       indicatorSize: TabBarIndicatorSize.label,
                       tabs: const [
                         Tab(text: 'İlanlar', icon: Icon(Icons.directions_car_filled_rounded)),
@@ -146,14 +160,42 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen> with Si
     );
   }
 
-  Widget _buildStatsBar(String uid, bool isVerified) {
+  Widget _buildAvatar(String? photoURL, String name, bool isPremium) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isPremium ? Colors.amber : Colors.transparent, width: 2)),
+      child: CircleAvatar(
+        radius: 55,
+        backgroundColor: Colors.white.withAlpha(20),
+        child: CircleAvatar(
+          radius: 50,
+          backgroundImage: photoURL != null ? CachedNetworkImageProvider(photoURL) : null,
+          child: photoURL == null ? Text(name[0].toUpperCase(), style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)) : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNameSection(String name, bool isVerified, bool isPremium) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+        if (isVerified || isPremium) const SizedBox(width: 8),
+        if (isPremium) const Icon(Icons.workspace_premium, color: Colors.amber, size: 24)
+        else if (isVerified) const Icon(Icons.verified, color: Colors.greenAccent, size: 20),
+      ],
+    );
+  }
+
+  Widget _buildStatsBar(String uid, bool isVerified, bool isPremium) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 30),
       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B).withAlpha(150),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withAlpha(10)),
+        border: Border.all(color: isPremium ? Colors.amber.withOpacity(0.3) : Colors.white.withAlpha(10)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,

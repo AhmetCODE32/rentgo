@@ -16,9 +16,15 @@ class Vehicle {
   final ListingType listingType;
   final List<String> images;
   final Map<String, dynamic> specs;
-  // YENİ: Koordinat Bilgileri
   final double? latitude;
   final double? longitude;
+  final DateTime? createdAt;
+  
+  // BOOST & PREMIUM & STATS FIELDS
+  final bool isBoosted;
+  final DateTime? boostExpiresAt;
+  final bool isPremiumListing;
+  final int views; // YENİ: İzlenme sayısı
 
   Vehicle({
     this.id,
@@ -36,6 +42,11 @@ class Vehicle {
     this.specs = const {},
     this.latitude,
     this.longitude,
+    this.createdAt,
+    this.isBoosted = false,
+    this.boostExpiresAt,
+    this.isPremiumListing = false,
+    this.views = 0, // Varsayılan 0
   });
 
   Map<String, dynamic> toMap() {
@@ -54,7 +65,11 @@ class Vehicle {
       'specs': specs,
       'latitude': latitude,
       'longitude': longitude,
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
+      'isBoosted': isBoosted,
+      'boostExpiresAt': boostExpiresAt != null ? Timestamp.fromDate(boostExpiresAt!) : null,
+      'isPremiumListing': isPremiumListing,
+      'views': views,
     };
   }
 
@@ -79,6 +94,11 @@ class Vehicle {
       specs: Map<String, dynamic>.from(map['specs'] ?? {}),
       latitude: (map['latitude'] as num?)?.toDouble(),
       longitude: (map['longitude'] as num?)?.toDouble(),
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
+      isBoosted: map['isBoosted'] ?? false,
+      boostExpiresAt: (map['boostExpiresAt'] as Timestamp?)?.toDate(),
+      isPremiumListing: map['isPremiumListing'] ?? false,
+      views: map['views'] ?? 0,
     );
   }
 }

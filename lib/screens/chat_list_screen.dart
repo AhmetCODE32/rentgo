@@ -15,10 +15,10 @@ class ChatListScreen extends StatelessWidget {
     final user = Provider.of<User?>(context);
     if (user == null) return const Scaffold(body: Center(child: Text('Giriş yapmalısınız.')));
 
-    final firestoreService = FirestoreService();
+    final firestoreService = context.read<FirestoreService>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A), // Modern koyu arka plan
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
         title: const Text('Mesajlarım', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF1E293B),
@@ -75,23 +75,24 @@ class _ChatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firestoreService = FirestoreService();
+    final firestoreService = context.read<FirestoreService>();
     final lastMessageTime = (chatData['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now();
     final formattedTime = _getFormattedDate(lastMessageTime);
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: firestoreService.getUserProfileStream(otherUserId),
       builder: (context, snapshot) {
-        final otherUser = snapshot.data?.data();
-        final otherUserName = otherUser?['displayName'] ?? 'Yükleniyor...';
-        final otherUserPhoto = otherUser?['photoURL'];
+        final otherUser = snapshot.data?.data() ?? {};
+        final bool isPremium = otherUser['isPremium'] ?? false;
+        final otherUserName = otherUser['displayName'] ?? 'Kullanıcı';
+        final otherUserPhoto = otherUser['photoURL'];
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
             color: const Color(0xFF1E293B),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withAlpha(10)),
+            border: Border.all(color: isPremium ? Colors.amber.withOpacity(0.2) : Colors.white.withAlpha(10)),
           ),
           child: InkWell(
             onTap: () {
@@ -114,23 +115,29 @@ class _ChatCard extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  // KARŞI TARAFIN PROFİL RESMİ
+                  // PROFİL RESMİ + PRO ÇERÇEVE
                   Stack(
                     children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.blueAccent.withAlpha(30),
-                        backgroundImage: otherUserPhoto != null ? CachedNetworkImageProvider(otherUserPhoto) : null,
-                        child: otherUserPhoto == null ? Text(otherUserName[0].toUpperCase(), style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)) : null,
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isPremium ? Colors.amber : Colors.transparent, width: 2),
+                        ),
+                        child: CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Colors.blueAccent.withAlpha(30),
+                          backgroundImage: otherUserPhoto != null ? CachedNetworkImageProvider(otherUserPhoto) : null,
+                          child: otherUserPhoto == null ? Text(otherUserName[0].toUpperCase(), style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)) : null,
+                        ),
                       ),
-                      // ARAÇ TİPİ KÜÇÜK İKON (SAĞ ALT)
                       Positioned(
                         right: 0,
                         bottom: 0,
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
-                          child: const Icon(Icons.directions_car, size: 10, color: Colors.white),
+                          decoration: BoxDecoration(color: isPremium ? Colors.amber : Colors.blueAccent, shape: BoxShape.circle),
+                          child: Icon(isPremium ? Icons.workspace_premium : Icons.directions_car, size: 10, color: Colors.black),
                         ),
                       ),
                     ],
@@ -143,14 +150,22 @@ class _ChatCard extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(otherUserName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                            Row(
+                              children: [
+                                Text(otherUserName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                if (isPremium) ...[
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.workspace_premium, color: Colors.amber, size: 14),
+                                ],
+                              ],
+                            ),
                             Text(formattedTime, style: TextStyle(color: Colors.white.withAlpha(50), fontSize: 12)),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
                           chatData['vehicleTitle'] ?? 'Araç İlanı',
-                          style: const TextStyle(color: Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.w500),
+                          style: TextStyle(color: isPremium ? Colors.amber.withOpacity(0.8) : Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 4),
                         Text(

@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:rentgo/core/constants.dart';
 import 'package:rentgo/core/firestore_service.dart';
 import 'package:rentgo/models/vehicle.dart';
+import 'package:rentgo/screens/vehicle_detail_screen.dart';
 import 'package:rentgo/widgets/vehicle_card.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:animate_do/animate_do.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,7 +33,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ÜST KISIM (PROFİL VERİSİ ARTIK CANLI GELİYOR)
             if (user != null) 
               StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                 stream: firestoreService.getUserProfileStream(user.uid),
@@ -55,27 +56,52 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   final allVehicles = snapshot.data!.docs.map((d) => d.data()).toList();
                   
-                  List<Vehicle> filteredVehicles = allVehicles.where((v) {
+                  List<Vehicle> filtered = allVehicles.where((v) {
                     final matchesSearch = v.title.toLowerCase().contains(_searchQuery.toLowerCase());
                     final matchesCategory = _selectedCategory == 'Hepsi' || v.category == _selectedCategory;
                     final matchesCity = _selectedCity == 'Tüm Türkiye' || v.city == _selectedCity;
                     return matchesSearch && matchesCategory && matchesCity;
                   }).toList();
 
-                  if (_sortBy == 'Fiyat (Artan)') {
-                    filteredVehicles.sort((a, b) => a.price.compareTo(b.price));
-                  } else if (_sortBy == 'Fiyat (Azalan)') {
-                    filteredVehicles.sort((a, b) => b.price.compareTo(a.price));
-                  } else if (_sortBy == 'Yıl (En Yeni)') {
-                    filteredVehicles.sort((a, b) => (b.specs['year'] ?? '').compareTo(a.specs['year'] ?? ''));
-                  }
+                  // Öne çıkanlar
+                  final boostedVehicles = filtered.where((v) => v.isBoosted).toList();
+                  
+                  // Normal liste (Öne çıkanları ana listeden çıkarıyoruz ki tekrar olmasın)
+                  final normalVehicles = filtered.where((v) => !v.isBoosted).toList();
 
-                  if (filteredVehicles.isEmpty) return _buildEmptyState();
+                  return CustomScrollView(
+                    slivers: [
+                      if (boostedVehicles.isNotEmpty && _searchQuery.isEmpty)
+                        SliverToBoxAdapter(
+                          child: FadeInDown(
+                            child: _buildFeaturedSection(boostedVehicles),
+                          ),
+                        ),
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: filteredVehicles.length,
-                    itemBuilder: (context, index) => VehicleCard(vehicle: filteredVehicles[index]),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                        sliver: SliverToBoxAdapter(
+                          child: Text(
+                            boostedVehicles.isNotEmpty ? 'Diğer İlanlar' : 'Tüm İlanlar', 
+                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)
+                          ),
+                        ),
+                      ),
+
+                      if (filtered.isEmpty) 
+                        SliverFillRemaining(child: _buildEmptyState())
+                      else
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              child: VehicleCard(vehicle: normalVehicles[index]),
+                            ),
+                            childCount: normalVehicles.length,
+                          ),
+                        ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                    ],
                   );
                 },
               ),
@@ -86,10 +112,39 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildFeaturedSection(List<Vehicle> boostedVehicles) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Row(
+            children: [
+              Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+              SizedBox(width: 8),
+              Text('ÖNERİLENLER', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, letterSpacing: 1.2, fontSize: 12)),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 220,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: boostedVehicles.length,
+            itemBuilder: (context, index) {
+              return _FeaturedCard(vehicle: boostedVehicles[index]);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- UI YARDIMCI METOTLARI ---
   Widget _buildHeader(Map<String, dynamic>? userData) {
     final String displayName = userData?['displayName'] ?? 'Sürücü';
     final String? photoURL = userData?['photoURL'];
-
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
       child: Row(
@@ -112,14 +167,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'Selam, ${displayName.split(' ').first} 👋',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
+                Text('Selam, ${displayName.split(' ').first} 👋', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
               ],
             ),
           ),
-          // ARTIK BU RESİM ANLIK OLARAK DEĞİŞECEK!
           CircleAvatar(
             radius: 24,
             backgroundColor: Colors.blueAccent.withAlpha(30),
@@ -169,12 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCategories() {
     final categories = ['Hepsi', 'Araba', 'Motor', 'Karavan', 'Bisiklet', 'Scooter', 'Ticari'];
     final icons = [Icons.grid_view_rounded, Icons.directions_car_rounded, Icons.motorcycle_rounded, Icons.rv_hookup_rounded, Icons.pedal_bike_rounded, Icons.electric_scooter_rounded, Icons.local_shipping_rounded];
-    return Column(
-      children: [
-        SizedBox(height: 45, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: categories.length, itemBuilder: (context, index) => _buildCategoryItem(categories[index], icons[index]))),
-        const SizedBox(height: 20),
-      ],
-    );
+    return SizedBox(height: 45, child: ListView.builder(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: categories.length, itemBuilder: (context, index) => _buildCategoryItem(categories[index], icons[index])));
   }
 
   Widget _buildCategoryItem(String title, IconData icon) {
@@ -224,4 +270,63 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildLoadingList() => Shimmer.fromColors(baseColor: Colors.white10, highlightColor: Colors.white24, child: ListView.builder(padding: const EdgeInsets.symmetric(horizontal: 20), itemCount: 3, itemBuilder: (context, index) => Container(height: 220, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))));
   Widget _buildEmptyState() => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.search_off_rounded, size: 80, color: Colors.white.withAlpha(20)), const SizedBox(height: 16), const Text('Aradığın araç bulunamadı.', style: TextStyle(color: Colors.white70, fontSize: 16))]));
+}
+
+class _FeaturedCard extends StatelessWidget {
+  final Vehicle vehicle;
+  const _FeaturedCard({required this.vehicle});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => VehicleDetailScreen(vehicle: vehicle))),
+      child: Container(
+        width: 300,
+        margin: const EdgeInsets.only(right: 16, left: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.1), blurRadius: 10, spreadRadius: 2)],
+          image: DecorationImage(
+            image: NetworkImage(vehicle.images.isNotEmpty ? vehicle.images[0] : 'https://via.placeholder.com/300'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.9)]),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(10), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 4)]),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.bolt, size: 14, color: Colors.black),
+                    SizedBox(width: 4),
+                    Text('ÖNERİLEN', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(vehicle.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+              Row(
+                children: [
+                  Text('₺${vehicle.price.toInt()}', style: const TextStyle(color: Colors.amber, fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(' / gün', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  const Spacer(),
+                  const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white38),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

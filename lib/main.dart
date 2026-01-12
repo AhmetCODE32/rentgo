@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rentgo/core/app_state.dart';
 import 'package:rentgo/core/auth_service.dart';
+import 'package:rentgo/core/firestore_service.dart';
 import 'package:rentgo/core/notification_service.dart';
 import 'package:rentgo/screens/onboarding_screen.dart';
 import 'package:rentgo/screens/main_screen.dart'; 
@@ -29,6 +30,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AppState()),
         Provider<AuthService>(create: (_) => AuthService()),
+        Provider<FirestoreService>(create: (_) => FirestoreService()), // DÜZELTİLDİ: FirestoreService eklendi
         StreamProvider<User?>(
           create: (context) => context.read<AuthService>().user,
           initialData: FirebaseAuth.instance.currentUser,
@@ -61,7 +63,6 @@ class MyApp extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               ),
-              // DÜZELTİLDİ: 'const' kaldırıldı, hata giderildi
               inputDecorationTheme: InputDecorationTheme(
                 filled: true,
                 fillColor: const Color(0xFF0F172A),
