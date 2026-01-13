@@ -15,29 +15,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingData> _pages = [
     OnboardingData(
-      title: 'İstediğin Aracı Bul',
-      description: 'Şehrindeki yüzlerce araç arasından sana en uygun olanı saniyeler içinde seç.',
+      title: 'KEŞFET',
+      description: 'Şehrindeki en özel araçları fütüristik bir deneyimle incele.',
       icon: Icons.search_rounded,
-      color: Colors.blueAccent,
     ),
     OnboardingData(
-      title: 'Güvenli Ödeme Yap',
-      description: 'Ödemen Vroomy güvencesiyle havuzda tutulur, teslimat onayına kadar satıcıya geçmez.',
-      icon: Icons.security_rounded,
-      color: Colors.greenAccent,
+      title: 'GÜVEN',
+      description: 'Vroomy teknolojisiyle tüm kiralama süreçlerin koruma altında.',
+      icon: Icons.shield_rounded,
     ),
-    OnboardingData(
-      title: 'Yola Çıkmaya Hazır mısın?',
-      description: 'Hemen kirala, anahtarını al ve özgürlüğün tadını çıkar. Vroomy her zaman yanında!',
-      icon: Icons.speed_rounded,
-      color: Colors.orangeAccent,
+    KeyOnboardingData(
+      title: 'SÜR',
+      description: 'Sınırları zorla ve özgürlüğün tadını çıkar. Anahtarın burada!',
+      icon: Icons.key_rounded,
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           PageView.builder(
@@ -49,11 +46,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             },
           ),
           
-          // ALT KISIM (INDICATOR VE BUTON)
           Positioned(
-            bottom: 50,
-            left: 24,
-            right: 24,
+            bottom: 60,
+            left: 32,
+            right: 32,
             child: Column(
               children: [
                 Row(
@@ -63,19 +59,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     (index) => AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       margin: const EdgeInsets.only(right: 8),
-                      height: 8,
-                      width: _currentPage == index ? 24 : 8,
+                      height: 4,
+                      width: _currentPage == index ? 32 : 8,
                       decoration: BoxDecoration(
-                        color: _currentPage == index ? Colors.blueAccent : Colors.white24,
-                        borderRadius: BorderRadius.circular(4),
+                        color: _currentPage == index ? Colors.white : Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 48),
                 SizedBox(
                   width: double.infinity,
-                  height: 56,
+                  height: 64,
                   child: ElevatedButton(
                     onPressed: () {
                       if (_currentPage == _pages.length - 1) {
@@ -90,14 +86,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
                     child: Text(
-                      _currentPage == _pages.length - 1 ? 'Hemen Başla' : 'Devam Et',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      _currentPage == _pages.length - 1 ? 'HEMEN BAŞLA' : 'SONRAKİ',
                     ),
                   ),
                 ),
@@ -123,36 +113,42 @@ class _OnboardingPage extends StatelessWidget {
         children: [
           FadeInDown(
             child: Container(
-              padding: const EdgeInsets.all(30),
+              padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
-                color: data.color.withAlpha(20),
+                color: const Color(0xFF0A0A0A),
                 shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withOpacity(0.05)),
               ),
-              child: Icon(data.icon, size: 100, color: data.color),
+              child: Icon(data.icon, size: 80, color: Colors.white),
             ),
           ),
-          const SizedBox(height: 60),
+          const SizedBox(height: 64),
           FadeInUp(
             child: Text(
               data.title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
                 color: Colors.white,
+                letterSpacing: 4,
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           FadeInUp(
             delay: const Duration(milliseconds: 200),
-            child: Text(
-              data.description,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-                height: 1.5,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                data.description,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.white.withOpacity(0.3),
+                  height: 1.6,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ),
@@ -166,12 +162,14 @@ class OnboardingData {
   final String title;
   final String description;
   final IconData icon;
-  final Color color;
 
   OnboardingData({
     required this.title,
     required this.description,
     required this.icon,
-    required this.color,
   });
+}
+
+class KeyOnboardingData extends OnboardingData {
+  KeyOnboardingData({required super.title, required super.description, required super.icon});
 }

@@ -9,6 +9,7 @@ import 'package:rentgo/core/firestore_service.dart';
 import 'package:rentgo/core/storage_service.dart';
 import '../core/app_state.dart';
 import '../models/vehicle.dart';
+import 'premium_screen.dart';
 
 class AddVehicleScreen extends StatefulWidget {
   const AddVehicleScreen({super.key});
@@ -32,7 +33,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   final _titleController = TextEditingController();
   final _priceController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _addressController = TextEditingController(); // MANUEL ADRES İÇİN
+  final _addressController = TextEditingController();
 
   final ImagePicker _picker = ImagePicker();
   final List<File> _images = [];
@@ -62,6 +63,22 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   }
 
   Future<void> _addVehicle() async {
+    final user = Provider.of<User?>(context, listen: false);
+    if (user == null) return;
+
+    final appState = context.read<AppState>();
+    final userDoc = await FirestoreService().getUserProfileStream(user.uid).first;
+    final userData = userDoc.data() ?? {};
+    final bool isPremium = userData['isPremium'] ?? false;
+    final int myListingCount = appState.allVehicles.where((v) => v.userId == user.uid).length;
+
+    // LIMIT KONTROLÜ: Pro değilse ve 3 ilanı varsa engelle
+    if (!isPremium && myListingCount >= 3) {
+      if(!mounted) return;
+      _showLimitDialog();
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       _showError('Lütfen tüm zorunlu alanları doldurun.');
       return;
@@ -71,10 +88,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       return;
     }
 
-    final user = Provider.of<User?>(context, listen: false);
-    if (user == null) return;
-
-    // GÜVENLİK KONTROLÜ: Telefon Numarası
     final String? userPhone = user.phoneNumber;
     if (userPhone == null || userPhone.isEmpty) {
       _showError('İlan vermek için hesabınızda doğrulanmış bir telefon numarası olmalıdır.');
@@ -87,10 +100,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     });
 
     try {
-      final userDoc = await FirestoreService().getUserProfileStream(user.uid).first;
-      final userData = userDoc.data();
-      final userCity = userData?['city'];
-
+      final userCity = userData['city'];
       if (userCity == null || userCity.isEmpty) throw 'Lütfen önce profilinizden şehrinizi seçin.';
 
       final List<String> imageUrls = await _storageService.uploadVehicleImages(_images);
@@ -100,17 +110,16 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
       final newVehicle = Vehicle(
         userId: user.uid,
-        sellerName: user.displayName ?? user.email?.split('@').first ?? 'Satıcı',
+        sellerName: userData['displayName'] ?? 'Satıcı',
         phoneNumber: userPhone, 
         title: _titleController.text,
         description: _descriptionController.text,
         city: userCity,
-        pickupAddress: _addressController.text, // MANUEL ADRES KAYDEDİLDİ
+        pickupAddress: _addressController.text,
         price: double.tryParse(_priceController.text) ?? 0,
         category: _selectedCategory,
         listingType: _listingType,
         images: imageUrls,
-        // HARİTA KOORDİNATLARI KALDIRILDI
         specs: {
           'year': _selectedYear ?? '',
           'transmission': _selectedTransmission ?? '',
@@ -129,6 +138,32 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showLimitDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF0A0A0A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Colors.white10)),
+        title: const Text('İLAN LİMİTİNE ULAŞILDI', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1)),
+        content: const Text(
+          'Standart hesaplar en fazla 3 ilan verebilir. Sınırsız ilan ve daha fazla özellik için Pro hesabına geçebilirsiniz.',
+          style: TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('KAPAT', style: TextStyle(color: Colors.white24, fontWeight: FontWeight.w900))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, minimumSize: const Size(120, 40)),
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
+            },
+            child: const Text('PRO\'YA GEÇ', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showError(String message) {
@@ -162,18 +197,23 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     final bool isPhoneVerified = user?.phoneNumber != null && user!.phoneNumber!.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('İlan Ver')),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('İLAN VER', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w900, fontSize: 16)),
+        backgroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: AbsorbPointer(
         absorbing: _isLoading,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('Araç Tipini Seçin', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
+                const _SectionTitle(title: 'ARAÇ TİPİ'),
                 SizedBox(
                   height: 90,
                   child: ListView.builder(
@@ -191,40 +231,45 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   ),
                 ),
                 
-                const SizedBox(height: 24),
-                const Text('Fotoğraflar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                if (_images.isNotEmpty) SizedBox(height: 100, child: _buildImageListView()),
+                const SizedBox(height: 32),
+                const _SectionTitle(title: 'FOTOĞRAFLAR'),
+                if (_images.isNotEmpty) ...[
+                  SizedBox(height: 100, child: _buildImageListView()),
+                  const SizedBox(height: 12),
+                ],
                 if (_images.length < 5) _buildImagePicker(),
                 
-                const SizedBox(height: 24),
-                const _SectionTitle(title: 'İlan Bilgileri'),
-                _Input(controller: _titleController, hint: 'İlan Başlığı (Örn: BMW 320i)', icon: Icons.title, validator: (v) => v!.isEmpty ? 'Başlık boş olamaz' : null),
+                const SizedBox(height: 32),
+                const _SectionTitle(title: 'GENEL BİLGİLER'),
+                _Input(controller: _titleController, hint: 'İlan Başlığı', icon: Icons.title_rounded),
                 const SizedBox(height: 16),
-                _Input(controller: _priceController, hint: 'Günlük Fiyat (₺)', icon: Icons.sell_outlined, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], validator: (v) => v!.isEmpty ? 'Fiyat boş olamaz' : null),
+                _Input(controller: _priceController, hint: 'Günlük Fiyat (₺)', icon: Icons.sell_rounded, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
                 const SizedBox(height: 16),
-                _Input(controller: _descriptionController, hint: 'Açıklama', icon: Icons.description_outlined, maxLines: 4, validator: (v) => v!.isEmpty ? 'Açıklama boş olamaz' : null),
+                _Input(controller: _descriptionController, hint: 'Açıklama', icon: Icons.description_rounded, maxLines: 4),
                 
-                const SizedBox(height: 24),
-                const _SectionTitle(title: 'Teslimat & İletişim'),
-                
-                // HARİTA BUTONU KALDIRILDI, SADECE MANUEL ADRES VAR
-                _Input(controller: _addressController, hint: 'Teslimat Adresi (Mahalle, Sokak vb.)', icon: Icons.location_on_outlined, maxLines: 2, validator: (v) => v!.isEmpty ? 'Adres boş olamaz' : null),
+                const SizedBox(height: 32),
+                const _SectionTitle(title: 'KONUM VE İLETİŞİM'),
+                _Input(controller: _addressController, hint: 'Teslimat Adresi', icon: Icons.location_on_rounded, maxLines: 2),
                 
                 const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: isPhoneVerified ? Colors.green.withAlpha(20) : Colors.red.withAlpha(20), borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A0A0A), 
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: isPhoneVerified ? Colors.green.withOpacity(0.2) : Colors.white10),
+                  ),
                   child: Row(
                     children: [
-                      Icon(isPhoneVerified ? Icons.verified_user : Icons.shield_outlined, color: isPhoneVerified ? Colors.greenAccent : Colors.redAccent, size: 24),
-                      const SizedBox(width: 12),
+                      Icon(isPhoneVerified ? Icons.verified_rounded : Icons.info_outline_rounded, color: isPhoneVerified ? Colors.greenAccent : Colors.white24, size: 24),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(isPhoneVerified ? 'Hesap Onaylı' : 'Güvenlik Uyarısı', style: TextStyle(color: isPhoneVerified ? Colors.greenAccent : Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold)),
-                            Text(isPhoneVerified ? 'İletişim: ${user?.phoneNumber}' : 'İlan vermek için telefon doğrulaması şarttır.', style: const TextStyle(fontSize: 13)),
+                            Text(isPhoneVerified ? 'KİMLİK DOĞRULANDI' : 'DOĞRULAMA GEREKLİ', style: TextStyle(color: isPhoneVerified ? Colors.greenAccent : Colors.white24, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                            const SizedBox(height: 4),
+                            Text(isPhoneVerified ? 'Telefon: ${user?.phoneNumber}' : 'İlan vermek için telefon numaranızı doğrulamalısınız.', style: const TextStyle(fontSize: 13, color: Colors.white70)),
                           ],
                         ),
                       ),
@@ -232,31 +277,32 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
-                const _SectionTitle(title: 'Araç Özellikleri'),
-                _DropdownInput<String>(hint: 'Yıl', icon: Icons.calendar_today_outlined, value: _selectedYear, items: List.generate(31, (i) => (DateTime.now().year - i).toString()), onChanged: (val) => setState(() => _selectedYear = val)),
+                const SizedBox(height: 32),
+                const _SectionTitle(title: 'DETAYLI ÖZELLİKLER'),
+                _DropdownInput<String>(hint: 'Model Yılı', icon: Icons.calendar_today_rounded, value: _selectedYear, items: List.generate(31, (i) => (DateTime.now().year - i).toString()), onChanged: (val) => setState(() => _selectedYear = val)),
                 
                 if (_selectedCategory != 'Bisiklet' && _selectedCategory != 'Scooter') ...[
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Expanded(child: _DropdownInput<String>(hint: 'Vites', icon: Icons.settings_input_svideo_outlined, value: _selectedTransmission, items: const ['Otomatik', 'Manuel'], onChanged: (val) => setState(() => _selectedTransmission = val))),
+                      Expanded(child: _DropdownInput<String>(hint: 'Vites', icon: Icons.settings_rounded, value: _selectedTransmission, items: const ['Otomatik', 'Manuel'], onChanged: (val) => setState(() => _selectedTransmission = val))),
                       if (fuelOptions.isNotEmpty) ...[
                         const SizedBox(width: 12),
-                        Expanded(child: _DropdownInput<String>(hint: 'Yakıt', icon: Icons.local_gas_station_outlined, value: _selectedFuel, items: fuelOptions, onChanged: (val) => setState(() => _selectedFuel = val))),
+                        Expanded(child: _DropdownInput<String>(hint: 'Yakıt', icon: Icons.local_gas_station_rounded, value: _selectedFuel, items: fuelOptions, onChanged: (val) => setState(() => _selectedFuel = val))),
                       ],
                     ],
                   ),
                 ] else if (_selectedCategory == 'Scooter') ...[
                   const SizedBox(height: 16),
-                  _DropdownInput<String>(hint: 'Yakıt', icon: Icons.local_gas_station_outlined, value: _selectedFuel, items: fuelOptions, onChanged: (val) => setState(() => _selectedFuel = val)),
+                  _DropdownInput<String>(hint: 'Yakıt', icon: Icons.local_gas_station_rounded, value: _selectedFuel, items: fuelOptions, onChanged: (val) => setState(() => _selectedFuel = val)),
                 ],
                 
-                const SizedBox(height: 40),
+                const SizedBox(height: 60),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _addVehicle,
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('İlanı Yayınla', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: _isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)) : const Text('İLANINI YAYINLA'),
                 ),
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -265,8 +311,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     );
   }
 
-  Widget _buildImageListView() => ListView.builder(scrollDirection: Axis.horizontal, itemCount: _images.length, itemBuilder: (context, index) => Stack(children: [Container(width: 100, height: 100, margin: const EdgeInsets.only(right: 12, top: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), image: DecorationImage(image: FileImage(_images[index]), fit: BoxFit.cover))), Positioned(top: 0, right: 4, child: GestureDetector(onTap: () => setState(() => _images.removeAt(index)), child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle), child: const Icon(Icons.close, size: 14, color: Colors.white))))]));
-  Widget _buildImagePicker() => InkWell(onTap: _pickImages, child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 24), decoration: BoxDecoration(color: Colors.blueAccent.withAlpha(25), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blueAccent.withAlpha(127), style: BorderStyle.solid)), child: const Column(children: [Icon(Icons.add_a_photo, color: Colors.blueAccent, size: 32), SizedBox(height: 8), Text('Fotoğraf Ekle', style: TextStyle(color: Colors.blueAccent))])));
+  Widget _buildImageListView() => ListView.builder(scrollDirection: Axis.horizontal, itemCount: _images.length, itemBuilder: (context, index) => Stack(children: [Container(width: 100, height: 100, margin: const EdgeInsets.only(right: 12), decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), image: DecorationImage(image: FileImage(_images[index]), fit: BoxFit.cover), border: Border.all(color: Colors.white10))), Positioned(top: 4, right: 16, child: GestureDetector(onTap: () => setState(() => _images.removeAt(index)), child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle), child: const Icon(Icons.close, size: 14, color: Colors.white))))]));
+  Widget _buildImagePicker() => InkWell(onTap: _pickImages, borderRadius: BorderRadius.circular(20), child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 32), decoration: BoxDecoration(color: const Color(0xFF0A0A0A), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(0.05))), child: const Column(children: [Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 32), SizedBox(height: 12), Text('FOTOĞRAF EKLE', style: TextStyle(color: Colors.white24, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1))])));
 }
 
 class _CategoryCard extends StatelessWidget {
@@ -275,20 +321,21 @@ class _CategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
-    child: Container(
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       width: 80,
       margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
-        color: selected ? Colors.blueAccent : Theme.of(context).colorScheme.surface,
+        color: selected ? Colors.white : const Color(0xFF0A0A0A),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blueAccent, width: 1.5),
+        border: Border.all(color: selected ? Colors.white : Colors.white.withOpacity(0.05)),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: selected ? Colors.white : Colors.blueAccent, size: 28),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: selected ? Colors.white : Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+          Icon(icon, color: selected ? Colors.black : Colors.white24, size: 28),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(color: selected ? Colors.black : Colors.white70, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
         ],
       ),
     ),
@@ -299,14 +346,26 @@ class _SectionTitle extends StatelessWidget {
   final String title;
   const _SectionTitle({required this.title});
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(top: 8, bottom: 12), child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)));
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white24, letterSpacing: 2)));
 }
 
 class _Input extends StatelessWidget {
   final TextEditingController controller; final String hint; final IconData icon; final int maxLines; final TextInputType keyboardType; final List<TextInputFormatter>? inputFormatters; final String? Function(String?)? validator;
   const _Input({required this.controller, required this.hint, required this.icon, this.maxLines = 1, this.keyboardType = TextInputType.text, this.inputFormatters, this.validator});
   @override
-  Widget build(BuildContext context) => TextFormField(controller: controller, maxLines: maxLines, keyboardType: keyboardType, inputFormatters: inputFormatters, validator: validator, decoration: InputDecoration(labelText: hint, prefixIcon: Icon(icon)));
+  Widget build(BuildContext context) => TextFormField(
+    controller: controller, 
+    maxLines: maxLines, 
+    keyboardType: keyboardType, 
+    inputFormatters: inputFormatters, 
+    validator: validator, 
+    style: const TextStyle(color: Colors.white, fontSize: 15),
+    decoration: InputDecoration(
+      labelText: hint, 
+      labelStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+      prefixIcon: Icon(icon, color: Colors.white24, size: 20),
+    )
+  );
 }
 
 class _DropdownInput<T> extends StatelessWidget {
@@ -329,7 +388,13 @@ class _DropdownInput<T> extends StatelessWidget {
     return DropdownButtonFormField<T>(
       value: value,
       validator: (val) => val == null ? 'Lütfen $hint seçin' : null,
-      decoration: InputDecoration(labelText: hint, prefixIcon: Icon(icon)),
+      dropdownColor: const Color(0xFF0A0A0A),
+      style: const TextStyle(color: Colors.white, fontSize: 15),
+      decoration: InputDecoration(
+        labelText: hint, 
+        labelStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+        prefixIcon: Icon(icon, color: Colors.white24, size: 20)
+      ),
       items: items.map((item) => DropdownMenuItem(value: item, child: Text(item.toString()))).toList(),
       onChanged: onChanged,
     );

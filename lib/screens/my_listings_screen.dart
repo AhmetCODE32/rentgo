@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:rentgo/core/app_state.dart';
 import 'package:rentgo/core/firestore_service.dart';
 import 'package:rentgo/models/vehicle.dart';
+import 'package:rentgo/screens/edit_vehicle_screen.dart';
 import 'package:rentgo/widgets/vehicle_card.dart';
 import 'package:animate_do/animate_do.dart';
 
@@ -26,21 +27,24 @@ class MyListingsScreen extends StatelessWidget {
         final int boostCount = userData['boostCount'] ?? 0;
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0F172A),
+          backgroundColor: Colors.black,
           body: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
             slivers: [
               SliverAppBar(
-                expandedHeight: 120,
+                expandedHeight: 140,
                 pinned: true,
-                backgroundColor: const Color(0xFF1E293B),
+                backgroundColor: Colors.black,
                 flexibleSpace: FlexibleSpaceBar(
-                  title: const Text('İlanlarım', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  centerTitle: false,
+                  titlePadding: const EdgeInsets.only(left: 24, bottom: 16),
+                  title: const Text('İLANLARIM', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 2)),
                   background: Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: isPremium ? [const Color(0xFFB8860B), const Color(0xFF0F172A)] : [const Color(0xFF2563EB), const Color(0xFF0F172A)],
+                        colors: [Color(0xFF111111), Colors.black],
                       ),
                     ),
                   ),
@@ -49,10 +53,16 @@ class MyListingsScreen extends StatelessWidget {
                   if (isPremium)
                     Padding(
                       padding: const EdgeInsets.only(right: 16, top: 12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.amber.withOpacity(0.5))),
-                        child: Text('$boostCount Boost Hakkı', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.1), 
+                            borderRadius: BorderRadius.circular(10), 
+                            border: Border.all(color: Colors.amber.withOpacity(0.3))
+                          ),
+                          child: Text('$boostCount BOOST', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1)),
+                        ),
                       ),
                     ),
                 ],
@@ -68,9 +78,9 @@ class MyListingsScreen extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.directions_car_outlined, size: 80, color: Colors.white.withAlpha(20)),
+                            Icon(Icons.directions_car_filled_rounded, size: 80, color: Colors.white.withOpacity(0.05)),
                             const SizedBox(height: 16),
-                            const Text('Henüz bir ilanınız bulunmuyor.', style: TextStyle(color: Colors.grey)),
+                            const Text('HENÜZ BİR İLANINIZ YOK', style: TextStyle(color: Colors.white24, fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -78,7 +88,7 @@ class MyListingsScreen extends StatelessWidget {
                   }
 
                   return SliverPadding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
@@ -87,11 +97,13 @@ class MyListingsScreen extends StatelessWidget {
                             duration: const Duration(milliseconds: 400),
                             delay: Duration(milliseconds: index * 100),
                             child: Container(
-                              margin: const EdgeInsets.only(bottom: 16),
+                              margin: const EdgeInsets.only(bottom: 24),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1E293B),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: vehicle.isBoosted ? Colors.amber.withOpacity(0.3) : Colors.white.withAlpha(5)),
+                                color: const Color(0xFF0A0A0A),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: vehicle.isBoosted ? Colors.amber.withOpacity(0.2) : Colors.white.withOpacity(0.05)
+                                ),
                               ),
                               child: Column(
                                 children: [
@@ -101,11 +113,11 @@ class MyListingsScreen extends StatelessWidget {
                                       if (vehicle.isBoosted)
                                         Positioned(
                                           top: 12,
-                                          right: 12,
+                                          left: 12,
                                           child: Container(
-                                            padding: const EdgeInsets.all(6),
+                                            padding: const EdgeInsets.all(8),
                                             decoration: const BoxDecoration(color: Colors.amber, shape: BoxShape.circle),
-                                            child: const Icon(Icons.bolt, color: Colors.black, size: 16),
+                                            child: const Icon(Icons.bolt_rounded, color: Colors.black, size: 16),
                                           ),
                                         ),
                                     ],
@@ -116,23 +128,25 @@ class MyListingsScreen extends StatelessWidget {
                                       children: [
                                         if (isPremium) ...[
                                           _ListingButton(
-                                            icon: Icons.bolt,
-                                            label: vehicle.isBoosted ? 'Boost Edildi' : 'Boost Et',
+                                            icon: Icons.bolt_rounded,
+                                            label: vehicle.isBoosted ? 'BOOSTED' : 'BOOST ET',
                                             color: Colors.amber,
                                             onTap: vehicle.isBoosted ? null : () => _showBoostConfirm(context, firestoreService, user.uid, vehicle),
                                           ),
-                                          const Spacer(),
+                                          const SizedBox(width: 8),
                                         ],
-                                        _ListingButton(
-                                          icon: Icons.edit_outlined,
-                                          label: 'Düzenle',
-                                          color: Colors.blueAccent,
-                                          onTap: () { /* Düzenle */ },
+                                        Expanded(
+                                          child: _ListingButton(
+                                            icon: Icons.edit_note_rounded,
+                                            label: 'DÜZENLE',
+                                            color: Colors.white,
+                                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditVehicleScreen(vehicle: vehicle))),
+                                          ),
                                         ),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: 8),
                                         _ListingButton(
                                           icon: Icons.delete_outline_rounded,
-                                          label: 'Sil',
+                                          label: '',
                                           color: Colors.redAccent,
                                           onTap: () => _showDeleteConfirm(context, vehicle),
                                         ),
@@ -161,19 +175,28 @@ class MyListingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: const Color(0xFF0A0A0A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24), 
+          side: BorderSide(color: Colors.amber.withOpacity(0.2)),
+        ),
         title: const Row(
           children: [
-            Icon(Icons.bolt, color: Colors.amber),
-            SizedBox(width: 8),
-            Text('İlanı Boost Et?'),
+            Icon(Icons.bolt_rounded, color: Colors.amber),
+            SizedBox(width: 12),
+            Text('İLAN BOOST EDİLSİN Mİ?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1)),
           ],
         ),
-        content: const Text('Bu işlem 1 boost hakkınızı kullanacak ve ilanınız 24 saat boyunca en üstte görünecektir.'),
+        content: const Text('Bu işlem 1 boost hakkınızı kullanacak ve ilanınız 24 saat boyunca en üstte görünecektir.', style: TextStyle(color: Colors.white70, fontSize: 13)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('İptal')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('İPTAL', style: TextStyle(color: Colors.white24, fontWeight: FontWeight.w900))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber, 
+              foregroundColor: Colors.black,
+              minimumSize: const Size(100, 40),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
             onPressed: () async {
               final success = await service.boostVehicle(vehicle.id!, uid);
               if (context.mounted) {
@@ -186,7 +209,7 @@ class MyListingsScreen extends StatelessWidget {
                 );
               }
             },
-            child: const Text('Onayla'),
+            child: const Text('ONAYLA', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
           ),
         ],
       ),
@@ -197,17 +220,21 @@ class MyListingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('İlanı Sil?'),
-        content: Text('${vehicle.title} ilanınız kalıcı olarak silinecektir. Emin misiniz?'),
+        backgroundColor: const Color(0xFF0A0A0A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24), 
+          side: const BorderSide(color: Colors.white10),
+        ),
+        title: const Text('İLAN SİLİNSİN Mİ?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1)),
+        content: Text('${vehicle.title} ilanınız kalıcı olarak silinecektir. Emin misiniz?', style: const TextStyle(color: Colors.white70, fontSize: 13)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('İptal')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('İPTAL', style: TextStyle(color: Colors.white24, fontWeight: FontWeight.w900))),
           TextButton(
             onPressed: () async {
               await context.read<AppState>().deleteVehicle(vehicle.id!);
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('Sil', style: TextStyle(color: Colors.redAccent)),
+            child: const Text('SİL', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w900)),
           ),
         ],
       ),
@@ -221,21 +248,25 @@ class _ListingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isIconOnly = label.isEmpty;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: isIconOnly ? 12 : 16, vertical: 12),
         decoration: BoxDecoration(
-          color: onTap == null ? Colors.grey.withAlpha(20) : color.withAlpha(20),
+          color: onTap == null ? Colors.white.withOpacity(0.02) : color.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: onTap == null ? Colors.grey.withAlpha(50) : color.withAlpha(50)),
+          border: Border.all(color: onTap == null ? Colors.white.withOpacity(0.05) : color.withOpacity(0.1)),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: onTap == null ? Colors.grey : color),
-            const SizedBox(width: 6),
-            Text(label, style: TextStyle(color: onTap == null ? Colors.grey : color, fontSize: 12, fontWeight: FontWeight.bold)),
+            Icon(icon, size: 18, color: onTap == null ? Colors.white10 : color),
+            if (!isIconOnly) ...[
+              const SizedBox(width: 8),
+              Text(label, style: TextStyle(color: onTap == null ? Colors.white10 : color, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+            ],
           ],
         ),
       ),

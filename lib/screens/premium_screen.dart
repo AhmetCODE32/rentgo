@@ -47,19 +47,19 @@ class _PremiumScreenState extends State<PremiumScreen> {
         final bool isPremium = userData['isPremium'] ?? false;
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0F172A),
+          backgroundColor: Colors.black,
           body: Stack(
             children: [
-              // Gold Background Effect
+              // Luxury Background Glow
               Positioned(
-                top: -100,
-                right: -100,
+                top: -150,
+                left: -100,
                 child: Container(
-                  width: 300,
-                  height: 300,
+                  width: 400,
+                  height: 400,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.amber.withOpacity(0.05),
+                    color: Colors.amber.withOpacity(0.08),
                   ),
                 ),
               ),
@@ -70,13 +70,14 @@ class _PremiumScreenState extends State<PremiumScreen> {
                     _buildAppBar(context),
                     Expanded(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(24),
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                         child: Column(
                           children: [
                             FadeInDown(
                               child: _buildHeader(isPremium),
                             ),
-                            const SizedBox(height: 40),
+                            const SizedBox(height: 48),
                             _buildFeatureList(),
                             const SizedBox(height: 40),
                             if (isPremium) _buildPremiumInfo(userData),
@@ -97,13 +98,18 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
   Widget _buildAppBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20), onPressed: () => Navigator.pop(context)),
-          const Spacer(),
-          const Text('ABONELİK YÖNETİMİ', style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28), 
+            onPressed: () => Navigator.pop(context)
+          ),
+          const Text(
+            'VROOMY PRO', 
+            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 3)
+          ),
           const SizedBox(width: 48),
         ],
       ),
@@ -114,24 +120,29 @@ class _PremiumScreenState extends State<PremiumScreen> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFB8860B)]),
-            boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.3), blurRadius: 20, spreadRadius: 5)],
+            color: const Color(0xFF111111),
+            border: Border.all(color: Colors.amber.withOpacity(0.3)),
+            boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.1), blurRadius: 40, spreadRadius: 5)],
           ),
-          child: Icon(isPremium ? Icons.workspace_premium : Icons.star_rounded, size: 60, color: Colors.white),
+          child: Icon(isPremium ? Icons.workspace_premium_rounded : Icons.bolt_rounded, size: 64, color: Colors.amber),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         Text(
-          isPremium ? 'VROOMY PRO ÜYESİSİNİZ' : 'VROOMY PRO\'YA GEÇİN',
+          isPremium ? 'PRO ÜYELİK AKTİF' : 'SINIRLARI ZORLAYIN',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900),
+          style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1),
         ),
-        const SizedBox(height: 8),
-        Text(
-          isPremium ? 'Tüm ayrıcalıkların tadını çıkarıyorsunuz.' : 'İlanlarınızı öne çıkarın, daha hızlı kiralayın.',
-          style: const TextStyle(color: Colors.white54, fontSize: 16),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            isPremium ? 'Tüm pro ayrıcalıklara sahipsiniz.' : 'İlanlarınız en tepede görünsün, komisyonsuz kiralayın.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 16, height: 1.5),
+          ),
         ),
       ],
     );
@@ -139,32 +150,37 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
   Widget _buildFeatureList() {
     final features = [
-      {'icon': Icons.bolt, 'title': 'Aylık 5 Adet İlan Boost', 'desc': 'İlanlarınızı en tepeye taşıyın'},
-      {'icon': Icons.verified, 'title': 'Pro Rozeti', 'desc': 'Profilinizde altın onay ikonu'},
-      {'icon': Icons.insights, 'title': 'Gelişmiş İstatistikler', 'desc': 'İlan görüntülenme analizi'},
-      {'icon': Icons.support_agent, 'title': 'Öncelikli Destek', 'desc': '7/24 hızlı müşteri hizmetleri'},
+      {'icon': Icons.bolt_rounded, 'title': 'Hızlı Listeleme', 'desc': 'İlanlarınız her zaman en üstte'},
+      {'icon': Icons.verified_rounded, 'title': 'Altın Rozet', 'desc': 'Güvenilir satıcı statüsü'},
+      {'icon': Icons.analytics_rounded, 'title': 'Detaylı Analiz', 'desc': 'İlan performansını takip edin'},
+      {'icon': Icons.support_agent_rounded, 'title': 'VIP Destek', 'desc': '7/24 öncelikli müşteri hattı'},
     ];
 
     return Column(
-      children: features.map((f) => FadeInLeft(
+      children: features.map((f) => FadeInUp(
         child: Container(
           margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.03),
-            borderRadius: BorderRadius.circular(20),
+            color: const Color(0xFF0A0A0A),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),
           child: Row(
             children: [
-              Icon(f['icon'] as IconData, color: Colors.amber, size: 28),
-              const SizedBox(width: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), borderRadius: BorderRadius.circular(16)),
+                child: Icon(f['icon'] as IconData, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 20),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(f['title'] as String, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    Text(f['desc'] as String, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                    Text(f['title'] as String, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
+                    const SizedBox(height: 4),
+                    Text(f['desc'] as String, style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13)),
                   ],
                 ),
               ),
@@ -176,21 +192,22 @@ class _PremiumScreenState extends State<PremiumScreen> {
   }
 
   Widget _buildPremiumInfo(Map<String, dynamic> data) {
+    if (data['premiumExpiryDate'] == null) return const SizedBox.shrink();
     final expiry = (data['premiumExpiryDate'] as Timestamp).toDate();
     final diff = expiry.difference(DateTime.now()).inDays;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
       decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.amber.withOpacity(0.2)),
+        color: Colors.amber.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.amber.withOpacity(0.1)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.calendar_month, color: Colors.amber, size: 20),
-          const SizedBox(width: 8),
-          Text('Yenilenmeye $diff gün kaldı', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+          const Icon(Icons.timer_outlined, color: Colors.amber, size: 18),
+          const SizedBox(width: 10),
+          Text('Yenilenmeye $diff gün kaldı', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
         ],
       ),
     );
@@ -198,42 +215,44 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
   Widget _buildActionArea(String uid, bool isPremium) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10)],
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),
+      decoration: const BoxDecoration(
+        color: Colors.black,
+        border: Border(top: BorderSide(color: Colors.white10)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (!isPremium) ...[
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
-                Text('₺199.99', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                Text(' / ay', style: TextStyle(color: Colors.white54)),
+                const Text('₺199', style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900)),
+                Text('.99', style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 18, fontWeight: FontWeight.w900)),
+                Text(' / AY', style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1)),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
           ],
           SizedBox(
             width: double.infinity,
-            height: 60,
+            height: 64,
             child: ElevatedButton(
               onPressed: _isProcessing ? null : () => isPremium ? _handleCancel(uid) : _handleUpgrade(uid),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isPremium ? Colors.transparent : Colors.amber,
+                backgroundColor: isPremium ? Colors.transparent : Colors.white,
                 foregroundColor: isPremium ? Colors.redAccent : Colors.black,
                 elevation: 0,
-                side: isPremium ? const BorderSide(color: Colors.redAccent) : BorderSide.none,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                side: isPremium ? const BorderSide(color: Colors.redAccent, width: 2) : BorderSide.none,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               ),
               child: _isProcessing 
-                ? const CircularProgressIndicator()
+                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 3))
                 : Text(
-                    isPremium ? 'ÜYELİĞİ İPTAL ET' : 'PRO\'YA GEÇ',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.1),
+                    isPremium ? 'ÜYELİĞİ İPTAL ET' : 'HEMEN BAŞLA',
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.5),
                   ),
             ),
           ),

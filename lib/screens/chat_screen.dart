@@ -89,65 +89,38 @@ class _ChatScreenState extends State<ChatScreen> {
     if (user == null) return const Scaffold(body: Center(child: Text('Lütfen giriş yapın.')));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: Colors.black,
+        centerTitle: false,
+        titleSpacing: 0,
         title: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
           stream: _firestoreService.getUserProfileStream(widget.otherUserId),
           builder: (context, snapshot) {
             final otherUserData = snapshot.data?.data();
             final photoURL = otherUserData?['photoURL'];
-            final displayName = otherUserData?['displayName'] ?? 'Yükleniyor...';
+            final displayName = otherUserData?['displayName'] ?? '...';
             final isOnline = otherUserData?['isOnline'] ?? false;
             final bool isPremium = otherUserData?['isPremium'] ?? false;
 
             return Row(
               children: [
-                Stack(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(1),
-                      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isPremium ? Colors.amber : Colors.transparent, width: 1)),
-                      child: CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Colors.blueAccent.withAlpha(30),
-                        backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
-                        child: photoURL == null ? Text(displayName[0].toUpperCase(), style: const TextStyle(fontSize: 14, color: Colors.blueAccent)) : null,
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: isOnline ? Colors.greenAccent : Colors.grey,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1E293B), width: 2),
-                        ),
-                      ),
-                    ),
-                  ],
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: const Color(0xFF111111),
+                  backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
+                  child: photoURL == null ? Text(displayName[0].toUpperCase(), style: const TextStyle(fontSize: 14, color: Colors.white24)) : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Text(displayName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                          if (isPremium) ...[
-                            const SizedBox(width: 4),
-                            const Icon(Icons.workspace_premium, color: Colors.amber, size: 12),
-                          ],
-                        ],
-                      ),
+                      Text(displayName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white)),
                       Text(
-                        isOnline ? 'Çevrimiçi' : 'Çevrimdışı',
-                        style: TextStyle(fontSize: 11, color: isOnline ? Colors.greenAccent : Colors.white.withAlpha(50)),
+                        isOnline ? 'ÇEVRİMİÇİ' : 'ÇEVRİMDAŞI',
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: isOnline ? Colors.greenAccent : Colors.white24, letterSpacing: 0.5),
                       ),
                     ],
                   ),
@@ -159,40 +132,23 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
+          _buildVehicleSummary(),
           Expanded(
             child: StreamBuilder(
               stream: _firestoreService.getMessages(widget.roomId),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-                if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) => _markAsRead());
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.chat_bubble_outline, size: 48, color: Colors.white.withAlpha(10)),
-                        const SizedBox(height: 12),
-                        const Text('Sohbeti başlatın!', style: TextStyle(color: Colors.white, fontSize: 14)),
-                      ],
-                    ),
-                  );
-                }
-
-                final messages = snapshot.data!.docs;
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Colors.white10));
+                
+                final messages = snapshot.data?.docs ?? [];
 
                 return ListView.builder(
                   controller: _scrollController,
                   reverse: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    try {
-                      final msg = Message.fromMap(messages[index]);
-                      return _MessageBubble(message: msg, isMe: msg.senderId == user.uid);
-                    } catch (e) { return const SizedBox(); }
+                    final msg = Message.fromMap(messages[index]);
+                    return _MessageBubble(message: msg, isMe: msg.senderId == user.uid);
                   },
                 );
               },
@@ -205,6 +161,33 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _buildVehicleSummary() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A0A0A),
+        border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05))),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: CachedNetworkImage(imageUrl: widget.vehicleImage, width: 40, height: 40, fit: BoxFit.cover),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              widget.vehicleTitle.toUpperCase(), 
+              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuickActions(String uid) {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: _firestoreService.getUserProfileStream(uid),
@@ -212,27 +195,22 @@ class _ChatScreenState extends State<ChatScreen> {
         final isPremium = snapshot.data?.data()?['isPremium'] ?? false;
         if (!isPremium) return const SizedBox.shrink();
 
-        final quickMessages = [
-          'Hala kiralık mı?',
-          'Fiyatta indirim olur mu?',
-          'Konum atar mısınız?',
-          'Ne zaman görebilirim?',
-        ];
+        final quickMessages = ['Hala kiralık mı?', 'İndirim olur mu?', 'Konum atar mısınız?'];
 
         return Container(
-          height: 50,
-          padding: const EdgeInsets.only(bottom: 8),
+          height: 45,
+          margin: const EdgeInsets.only(bottom: 8),
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             itemCount: quickMessages.length,
             itemBuilder: (context, index) {
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ActionChip(
-                  label: Text(quickMessages[index], style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold)),
-                  backgroundColor: Colors.amber.withOpacity(0.1),
-                  side: BorderSide(color: Colors.amber.withOpacity(0.3)),
+                  label: Text(quickMessages[index], style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
+                  backgroundColor: const Color(0xFF0A0A0A),
+                  side: const BorderSide(color: Colors.white10),
                   onPressed: () => _sendMessage(quickMessages[index]),
                 ),
               );
@@ -245,27 +223,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageInput() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E293B),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 40),
+      decoration: const BoxDecoration(color: Colors.black),
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: _messageController,
-              onSubmitted: (val) {
-                if (val.trim().isNotEmpty) _sendMessage();
-              },
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Mesajınızı yazın...',
-                hintStyle: TextStyle(color: Colors.white.withAlpha(80)),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: BorderSide.none),
-                filled: true,
-                fillColor: const Color(0xFF0F172A),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(color: const Color(0xFF0A0A0A), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)),
+              child: TextField(
+                controller: _messageController,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: const InputDecoration(
+                  hintText: 'Mesajınızı yazın...',
+                  hintStyle: TextStyle(color: Colors.white10),
+                  border: InputBorder.none,
+                ),
               ),
             ),
           ),
@@ -274,8 +247,8 @@ class _ChatScreenState extends State<ChatScreen> {
             onTap: () => _sendMessage(),
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: const Icon(Icons.send_rounded, color: Colors.black, size: 20),
             ),
           ),
         ],
@@ -297,44 +270,24 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Container(
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
             margin: const EdgeInsets.symmetric(vertical: 4),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              gradient: isMe 
-                ? const LinearGradient(colors: [Colors.blueAccent, Color(0xFF2563EB)]) 
-                : null,
-              color: isMe ? null : const Color(0xFF334155),
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(18),
-                topRight: const Radius.circular(18),
-                bottomLeft: Radius.circular(isMe ? 18 : 4),
-                bottomRight: Radius.circular(isMe ? 4 : 18),
-              ),
+              color: isMe ? Colors.white : const Color(0xFF0A0A0A),
+              borderRadius: BorderRadius.circular(16),
+              border: isMe ? null : Border.all(color: Colors.white.withOpacity(0.05)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  message.text ?? '',
-                  style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.3),
-                ),
-                if (isMe) ...[
-                  const SizedBox(height: 2),
-                  Icon(
-                    message.isRead ? Icons.done_all : Icons.done,
-                    size: 16,
-                    color: message.isRead ? Colors.lightBlueAccent : Colors.white.withAlpha(100),
-                  ),
-                ],
-              ],
+            child: Text(
+              message.text ?? '',
+              style: TextStyle(color: isMe ? Colors.black : Colors.white70, fontSize: 14, fontWeight: isMe ? FontWeight.w600 : FontWeight.normal),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Text(
               DateFormat('HH:mm').format(message.createdAt),
-              style: TextStyle(color: Colors.white.withAlpha(80), fontSize: 10),
+              style: const TextStyle(color: Colors.white10, fontSize: 9, fontWeight: FontWeight.bold),
             ),
           ),
         ],

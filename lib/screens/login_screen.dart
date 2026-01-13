@@ -58,142 +58,120 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // PREMIUM GRADYAN ARKA PLAN
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1E293B), Color(0xFF0F172A), Color(0xFF1E1B4B)],
+          // Background Glow
+          Positioned(
+            top: -100,
+            right: -50,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
               ),
             ),
-          ),
-          
-          Positioned(
-            top: -50,
-            right: -50,
-            child: Container(width: 200, height: 200, decoration: BoxDecoration(color: Colors.blueAccent.withAlpha(20), shape: BoxShape.circle)),
           ),
 
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 30),
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // MODERN LOGO
                     FadeInDown(
                       duration: const Duration(milliseconds: 1000),
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(5),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.blueAccent.withAlpha(30)),
-                          boxShadow: [BoxShadow(color: Colors.blueAccent.withAlpha(10), blurRadius: 30, spreadRadius: 5)],
-                        ),
-                        child: Icon(Icons.speed_rounded, color: Colors.blueAccent, size: size.height * 0.07),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    FadeInUp(
                       child: const Text(
                         "VROOMY",
-                        style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 6),
+                        style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 8),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    FadeInUp(
+                      child: Text(
+                        "PRESTİJLİ SÜRÜŞÜN ADRESİ",
+                        style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 3),
+                      ),
+                    ),
+                    const SizedBox(height: 64),
+
+                    // Login Form
                     FadeInUp(
                       delay: const Duration(milliseconds: 200),
-                      child: Text(
-                        "Hız Kesmeden Kirala.",
-                        style: TextStyle(color: Colors.white.withAlpha(100), fontSize: 14, letterSpacing: 1.5),
-                      ),
-                    ),
-                    const SizedBox(height: 50),
-
-                    // CAM EFEKTLİ GİRİŞ ALANLARI
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(5),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white.withAlpha(10)),
-                          ),
-                          child: Column(
-                            children: [
-                              _AuthInput(controller: _emailController, hint: 'E-posta Adresi', icon: Icons.alternate_email_rounded),
-                              const SizedBox(height: 16),
-                              _AuthInput(controller: _passwordController, hint: 'Şifre', icon: Icons.lock_outline_rounded, isPassword: true),
-                              const SizedBox(height: 32),
-                              
-                              if (_isLoading)
-                                const CircularProgressIndicator(color: Colors.blueAccent)
-                              else
-                                ElevatedButton(
-                                  onPressed: _loginWithEmail,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blueAccent,
-                                    shadowColor: Colors.blueAccent.withAlpha(100),
-                                    elevation: 10,
-                                    minimumSize: const Size.fromHeight(56),
-                                  ),
-                                  child: const Text('Giriş Yap', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                                ),
-                            ],
-                          ),
-                        ),
+                      child: Column(
+                        children: [
+                          _AuthInput(controller: _emailController, hint: 'E-POSTA ADRESİ', icon: Icons.alternate_email_rounded),
+                          const SizedBox(height: 16),
+                          _AuthInput(controller: _passwordController, hint: 'ŞİFRE', icon: Icons.lock_outline_rounded, isPassword: true),
+                          const SizedBox(height: 32),
+                          
+                          if (_isLoading)
+                            const CircularProgressIndicator(color: Colors.white)
+                          else
+                            ElevatedButton(
+                              onPressed: _loginWithEmail,
+                              child: const Text('GİRİŞ YAP'),
+                            ),
+                        ],
                       ),
                     ),
                     
                     const SizedBox(height: 40),
                     
-                    // SADECE GOOGLE GİRİŞİ KALDI
-                    FadeInUp(
+                    // Social Login Divider
+                    FadeIn(
                       delay: const Duration(milliseconds: 400),
-                      child: GestureDetector(
-                        onTap: _loginWithGoogle,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(5),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white.withAlpha(10)),
+                      child: Row(
+                        children: [
+                          Expanded(child: Divider(color: Colors.white.withOpacity(0.05))),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text("VEYA", style: TextStyle(color: Colors.white.withOpacity(0.1), fontSize: 10, fontWeight: FontWeight.bold)),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Image.asset('assets/google_logo.png', height: 24, errorBuilder: (c, e, s) => const Icon(Icons.g_mobiledata, color: Colors.white, size: 24)),
-                              const SizedBox(width: 12),
-                              const Text('Google ile Devam Et', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
+                          Expanded(child: Divider(color: Colors.white.withOpacity(0.05))),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Google Login Button
+                    FadeInUp(
+                      delay: const Duration(milliseconds: 500),
+                      child: OutlinedButton(
+                        onPressed: _loginWithGoogle,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                          backgroundColor: const Color(0xFF0A0A0A),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset('assets/google_logo.png', height: 20, errorBuilder: (c, e, s) => const Icon(Icons.g_mobiledata, color: Colors.white)),
+                            const SizedBox(width: 12),
+                            const Text('GOOGLE İLE DEVAM ET', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 1)),
+                          ],
                         ),
                       ),
                     ),
                     
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 48),
                     
-                    // KAYİT OLMA ALANI
+                    // Sign Up Link
                     FadeInUp(
                       delay: const Duration(milliseconds: 600),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text("Hesabın yok mu?", style: TextStyle(color: Colors.white.withAlpha(100))),
+                          Text("HESABINIZ YOK MU?", style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
                           TextButton(
                             onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const SignupScreen())),
-                            child: const Text("Hemen Kayıt Ol", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+                            child: const Text("KAYIT OL", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1)),
                           ),
                         ],
                       ),
@@ -217,15 +195,17 @@ class _AuthInput extends StatelessWidget {
     return TextFormField(
       controller: controller,
       obscureText: isPassword,
-      style: const TextStyle(color: Colors.white, fontSize: 15),
+      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
       decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: Colors.white.withAlpha(40)),
-        prefixIcon: Icon(icon, color: Colors.blueAccent.withAlpha(150), size: 20),
+        labelText: hint,
+        labelStyle: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+        prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.2), size: 20),
         filled: true,
-        fillColor: Colors.white.withAlpha(5),
+        fillColor: const Color(0xFF0A0A0A),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.03))),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       ),
     );
   }

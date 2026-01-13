@@ -28,7 +28,6 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // KONTROL: İlan görüntülendiğinde izlenme sayısını artır
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<FirestoreService>().incrementVehicleViews(widget.vehicle.id!);
     });
@@ -59,7 +58,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Paylaşım penceresi açılamadı. Lütfen uygulamayı baştan başlatın.'), backgroundColor: Colors.redAccent),
+          const SnackBar(content: Text('Paylaşım penceresi açılamadı.'), backgroundColor: Colors.redAccent),
         );
       }
     }
@@ -111,14 +110,14 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     final priceFormatter = NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('İlan Detayı'),
-        backgroundColor: Colors.transparent,
+        title: const Text('DETAYLAR', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w900, fontSize: 16)),
+        backgroundColor: Colors.black,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_rounded, color: Colors.white),
+            icon: const Icon(Icons.share_outlined, color: Colors.white),
             onPressed: _shareVehicle,
           ),
           const SizedBox(width: 8),
@@ -127,7 +126,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
       body: Column(
         children: [
           SizedBox(
-            height: 300,
+            height: 350,
             child: Stack(
               children: [
                 Hero(
@@ -143,7 +142,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                 ),
                 if (hasImages && widget.vehicle.images.length > 1)
                   Positioned(
-                    bottom: 20,
+                    bottom: 30,
                     left: 0,
                     right: 0,
                     child: Row(
@@ -152,11 +151,11 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                         widget.vehicle.images.length,
                         (index) => Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: _activePage == index ? 20 : 8,
-                          height: 8,
+                          width: _activePage == index ? 24 : 8,
+                          height: 4,
                           decoration: BoxDecoration(
-                            color: _activePage == index ? Colors.blueAccent : Colors.grey.withAlpha(127),
-                            borderRadius: BorderRadius.circular(4),
+                            color: _activePage == index ? Colors.white : Colors.white24,
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                       ),
@@ -168,41 +167,57 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
           
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: Text(widget.vehicle.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white))),
-                      Text(priceFormatter.format(widget.vehicle.price), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.blueAccent)),
+                      Expanded(
+                        child: Text(
+                          widget.vehicle.title, 
+                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1)
+                        )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Row(children: [const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey), const SizedBox(width: 4), Text(widget.vehicle.city, style: const TextStyle(color: Colors.grey))]),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(8)),
+                    child: Text(
+                      priceFormatter.format(widget.vehicle.price), 
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(children: [const Icon(Icons.location_on_rounded, size: 14, color: Colors.white24), const SizedBox(width: 4), Text(widget.vehicle.city, style: const TextStyle(color: Colors.white24, fontWeight: FontWeight.bold))]),
                   
-                  const SizedBox(height: 32),
-                  const _SectionTitle(title: 'Açıklama'),
-                  Text(widget.vehicle.description, style: TextStyle(color: Colors.white.withAlpha(200), height: 1.6, fontSize: 15)),
+                  const SizedBox(height: 40),
+                  const _SectionTitle(title: 'HAKKINDA'),
+                  Text(widget.vehicle.description, style: TextStyle(color: Colors.white.withOpacity(0.6), height: 1.7, fontSize: 15)),
 
-                  const SizedBox(height: 32),
-                  const _SectionTitle(title: 'Özellikler'),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      _SpecChip(icon: Icons.calendar_today, label: widget.vehicle.specs['year'] ?? 'Belirtilmemiş'),
-                      _SpecChip(icon: Icons.settings, label: widget.vehicle.specs['transmission'] ?? 'Belirtilmemiş'),
-                      _SpecChip(icon: Icons.local_gas_station, label: widget.vehicle.specs['fuel'] ?? 'Belirtilmemiş'),
-                    ],
+                  const SizedBox(height: 40),
+                  const _SectionTitle(title: 'ÖZELLİKLER'),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _SpecChip(icon: Icons.calendar_today_rounded, label: widget.vehicle.specs['year'] ?? '-'),
+                        _SpecChip(icon: Icons.settings_rounded, label: widget.vehicle.specs['transmission'] ?? '-'),
+                        _SpecChip(icon: Icons.local_gas_station_rounded, label: widget.vehicle.specs['fuel'] ?? '-'),
+                      ],
+                    ),
                   ),
 
-                  const SizedBox(height: 32),
-                  const _SectionTitle(title: 'Satıcı Bilgileri'),
+                  const SizedBox(height: 40),
+                  const _SectionTitle(title: 'SAHİBİ'),
                   _buildSellerCard(context, firestoreService),
                   
-                  const SizedBox(height: 100),
+                  const SizedBox(height: 120),
                 ],
               ),
             ),
@@ -221,68 +236,40 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
         final bool isPremium = userData['isPremium'] ?? false;
         final String? photoURL = userData['photoURL'];
         final String displayName = userData['displayName'] ?? widget.vehicle.sellerName;
-        final Timestamp? createdAt = userData['createdAt'] as Timestamp?;
         
-        // GÜVEN: Üyelik Süresi Hesaplama
-        String memberSince = 'Yeni Üye';
-        if (createdAt != null) {
-          final diff = DateTime.now().difference(createdAt.toDate());
-          if (diff.inDays > 365) {
-            memberSince = '${(diff.inDays / 365).floor()} yıldır üye';
-          } else if (diff.inDays > 30) {
-            memberSince = '${(diff.inDays / 30).floor()} aydır üye';
-          } else {
-            memberSince = '${diff.inDays} gündür üye';
-          }
-        }
-
         return InkWell(
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OtherUserProfileScreen(userId: widget.vehicle.userId, userName: displayName))),
+          borderRadius: BorderRadius.circular(24),
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B), 
-              borderRadius: BorderRadius.circular(20), 
-              border: Border.all(color: isPremium ? Colors.amber.withOpacity(0.3) : Colors.white.withAlpha(10)),
+              color: const Color(0xFF0A0A0A), 
+              borderRadius: BorderRadius.circular(24), 
+              border: Border.all(color: isPremium ? Colors.amber.withOpacity(0.3) : Colors.white.withOpacity(0.05)),
             ),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isPremium ? Colors.amber : Colors.transparent, width: 2)),
-                  child: CircleAvatar(
-                    radius: 25, 
-                    backgroundColor: Colors.blueAccent, 
-                    backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
-                    child: photoURL == null ? Text(displayName[0].toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)) : null,
-                  ),
+                CircleAvatar(
+                  radius: 24, 
+                  backgroundColor: const Color(0xFF111111), 
+                  backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
+                  child: photoURL == null ? Text(displayName[0].toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)) : null,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                          if (isPremium) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(4)),
-                              child: const Text('PRO', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        ],
-                      ),
+                      Text(displayName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.white)),
+                      const SizedBox(height: 2),
                       Text(
-                        isPremium ? 'Vroomy Pro Satıcı • $memberSince' : 'Doğrulanmış Satıcı • $memberSince', 
-                        style: TextStyle(color: isPremium ? Colors.amber : Colors.blueAccent, fontSize: 12, fontWeight: isPremium ? FontWeight.bold : FontWeight.normal),
+                        isPremium ? 'Vroomy Pro Satıcı' : 'Doğrulanmış Üye', 
+                        style: TextStyle(color: isPremium ? Colors.amber : Colors.white24, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                const Icon(Icons.chevron_right_rounded, size: 20, color: Colors.white24),
               ],
             ),
           ),
@@ -295,35 +282,24 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
     if (isMyVehicle) return const SizedBox.shrink();
     
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      decoration: const BoxDecoration(color: Color(0xFF0F172A), border: Border(top: BorderSide(color: Colors.white10))),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+      decoration: const BoxDecoration(
+        color: Colors.black, 
+        border: Border(top: BorderSide(color: Colors.white10))
+      ),
       child: Row(
         children: [
           Expanded(
-            child: ElevatedButton.icon(
+            child: OutlinedButton(
               onPressed: _startChat,
-              icon: const Icon(Icons.chat_bubble_outline_rounded),
-              label: const Text('Soru Sor'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E293B), 
-                foregroundColor: Colors.white, 
-                minimumSize: const Size.fromHeight(56),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
+              child: const Text('MESAJ GÖNDER', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
             ),
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               onPressed: () => _makePhoneCall(widget.vehicle.phoneNumber),
-              icon: const Icon(Icons.phone_in_talk_rounded),
-              label: const Text('Satıcıyı Ara'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent, 
-                foregroundColor: Colors.white, 
-                minimumSize: const Size.fromHeight(56),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
+              child: const Text('HEMEN ARA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
             ),
           ),
         ],
@@ -336,19 +312,46 @@ class _SectionTitle extends StatelessWidget {
   final String title;
   const _SectionTitle({required this.title});
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)));
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16), 
+    child: Text(
+      title, 
+      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white24, letterSpacing: 2)
+    )
+  );
 }
 
 class _SpecChip extends StatelessWidget {
   final IconData icon; final String label;
   const _SpecChip({required this.icon, required this.label});
   @override
-  Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(12)), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 16, color: Colors.blueAccent), const SizedBox(width: 8), Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13))]));
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(right: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
+    decoration: BoxDecoration(
+      color: const Color(0xFF0A0A0A), 
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Colors.white.withOpacity(0.05)),
+    ), 
+    child: Row(
+      mainAxisSize: MainAxisSize.min, 
+      children: [
+        Icon(icon, size: 16, color: Colors.white), 
+        const SizedBox(width: 10), 
+        Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold))
+      ]
+    )
+  );
 }
 
 class _PhotoBox extends StatelessWidget {
   final IconData? icon; final String? imageUrl;
   const _PhotoBox({this.icon, this.imageUrl});
   @override
-  Widget build(BuildContext context) => Container(margin: const EdgeInsets.symmetric(horizontal: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), color: const Color(0xFF1E293B)), child: ClipRRect(borderRadius: BorderRadius.circular(24), child: imageUrl != null ? CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.cover, placeholder: (c, u) => const Center(child: CircularProgressIndicator())) : Center(child: Icon(icon, size: 80, color: Colors.white10))));
+  Widget build(BuildContext context) => Container(
+    decoration: const BoxDecoration(color: Color(0xFF0A0A0A)), 
+    child: imageUrl != null 
+      ? CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.cover) 
+      : Center(child: Icon(icon, size: 80, color: Colors.white10))
+  );
 }

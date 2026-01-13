@@ -5,6 +5,7 @@ import '../models/vehicle.dart';
 import '../models/booking.dart';
 import '../models/message.dart';
 import '../models/review.dart';
+import '../models/notification.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -45,12 +46,20 @@ class FirestoreService {
   Future<void> upgradeToPremium(String uid) async {
     final now = DateTime.now();
     final expiryDate = now.add(const Duration(days: 30));
-    return _usersRef.doc(uid).update({
+    await _usersRef.doc(uid).update({
       'isPremium': true,
       'premiumStartDate': Timestamp.fromDate(now),
       'premiumExpiryDate': Timestamp.fromDate(expiryDate),
       'boostCount': 5,
     });
+    
+    // BİLDİRİM EKLE
+    await addNotification(uid, AppNotification(
+      title: 'VROOMY PRO AKTİF',
+      body: 'Hoş geldin! Pro ayrıcalıkların tanımlandı. 5 adet boost hakkın seni bekliyor.',
+      createdAt: DateTime.now(),
+      type: NotificationType.premium,
+    ));
   }
 
   Future<void> cancelPremium(String uid) {
@@ -67,12 +76,51 @@ class FirestoreService {
     final int currentBoosts = userData['boostCount'] ?? 0;
     final bool isPremium = userData['isPremium'] ?? false;
     if (!isPremium || currentBoosts <= 0) return false;
+    
     await _vehiclesRef.doc(vehicleId).update({
       'isBoosted': true,
       'boostExpiresAt': Timestamp.fromDate(DateTime.now().add(const Duration(hours: 24))),
     });
     await _usersRef.doc(userId).update({'boostCount': currentBoosts - 1});
+    
+    // BİLDİRİM EKLE
+    await addNotification(userId, AppNotification(
+      title: 'İLAN BOOST EDİLDİ',
+      body: 'İlanınız 24 saat boyunca en üstte görünecektir.',
+      createdAt: DateTime.now(),
+      type: NotificationType.system,
+      relatedId: vehicleId,
+    ));
+    
     return true;
+  }
+
+  // --- NOTIFICATIONS ---
+  Future<void> addNotification(String userId, AppNotification notification) async {
+    await _usersRef.doc(userId).collection('notifications').add(notification.toMap());
+  }
+
+  Stream<QuerySnapshot<AppNotification>> getNotifications(String userId) {
+    return _usersRef
+        .doc(userId)
+        .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .withConverter<AppNotification>(
+          fromFirestore: (s, _) => AppNotification.fromMap(s),
+          toFirestore: (n, _) => n.toMap(),
+        )
+        .snapshots();
+  }
+
+  Future<void> markNotificationAsRead(String userId, String notificationId) async {
+    await _usersRef.doc(userId).collection('notifications').doc(notificationId).update({'isRead': true});
+  }
+
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    final batch = _db.batch();
+    final unread = await _usersRef.doc(userId).collection('notifications').where('isRead', isEqualTo: false).get();
+    for (var doc in unread.docs) { batch.update(doc.reference, {'isRead': true}); }
+    await batch.commit();
   }
 
   // --- USER PROFILE METHODS ---
@@ -132,6 +180,15 @@ class FirestoreService {
     await _chatsRef.doc(roomId).collection('messages').add({'senderId': senderId, 'text': text, 'isRead': false, 'createdAt': FieldValue.serverTimestamp()});
     final receiverId = senderId == ownerId ? customerId : ownerId;
     await _usersRef.doc(receiverId).update({'unreadCount': FieldValue.increment(1), 'lastNotification': '$senderName: $text', 'lastNotificationRoomId': roomId});
+    
+    // UYGULAMA İÇİ BİLDİRİM KAYDI
+    await addNotification(receiverId, AppNotification(
+      title: 'YENİ MESAJ',
+      body: '$senderName: $text',
+      createdAt: DateTime.now(),
+      type: NotificationType.message,
+      relatedId: roomId,
+    ));
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getChatRooms(String userId) => _chatsRef.where('users', arrayContains: userId).orderBy('lastMessageTime', descending: true).snapshots();

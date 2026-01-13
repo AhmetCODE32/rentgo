@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AppState()),
         Provider<AuthService>(create: (_) => AuthService()),
-        Provider<FirestoreService>(create: (_) => FirestoreService()), // DÜZELTİLDİ: FirestoreService eklendi
+        Provider<FirestoreService>(create: (_) => FirestoreService()),
         StreamProvider<User?>(
           create: (context) => context.read<AuthService>().user,
           initialData: FirebaseAuth.instance.currentUser,
@@ -45,29 +45,82 @@ class MyApp extends StatelessWidget {
             theme: ThemeData(
               useMaterial3: true,
               brightness: Brightness.dark,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.blueAccent,
-                brightness: Brightness.dark,
-                surface: const Color(0xFF1E293B),
+              scaffoldBackgroundColor: Colors.black,
+              primaryColor: Colors.white,
+              colorScheme: const ColorScheme.dark(
+                primary: Colors.white,
+                secondary: Colors.white70,
+                surface: Color(0xFF0A0A0A),
+                onSurface: Colors.white,
+                onPrimary: Colors.black,
               ),
               appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.transparent,
+                backgroundColor: Colors.black,
                 elevation: 0,
                 centerTitle: true,
+                titleTextStyle: TextStyle(
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
+                iconTheme: IconThemeData(color: Colors.white),
               ),
               elevatedButtonTheme: ElevatedButtonThemeData(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size.fromHeight(56),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1),
+                ),
+              ),
+              outlinedButtonTheme: OutlinedButtonThemeData(
+                style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(54),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  side: const BorderSide(color: Colors.white24),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  minimumSize: const Size.fromHeight(56),
                 ),
               ),
               inputDecorationTheme: InputDecorationTheme(
                 filled: true,
-                fillColor: const Color(0xFF0F172A),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                fillColor: const Color(0xFF111111),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.white10),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.white10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.white),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                hintStyle: const TextStyle(color: Colors.white24),
+              ),
+              cardTheme: CardThemeData(
+                color: const Color(0xFF0A0A0A),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: const BorderSide(color: Colors.white10),
+                ),
+              ),
+              textTheme: const TextTheme(
+                displayLarge: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1.5),
+                titleLarge: TextStyle(fontWeight: FontWeight.w800, color: Colors.white),
+                bodyLarge: TextStyle(color: Colors.white70),
+              ),
+              floatingActionButtonTheme: const FloatingActionButtonThemeData(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+              ),
+              bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+                backgroundColor: Colors.black,
+                selectedItemColor: Colors.white,
+                unselectedItemColor: Colors.white24,
               ),
             ),
             home: user == null ? const OnboardingScreen() : const MainScreen(),
@@ -75,20 +128,5 @@ class MyApp extends StatelessWidget {
         },
       ),
     );
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final user = context.watch<User?>();
-
-    if (user == null) {
-      return const OnboardingScreen();
-    }
-    
-    return const MainScreen(); 
   }
 }

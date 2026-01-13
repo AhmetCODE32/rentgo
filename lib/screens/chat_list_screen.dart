@@ -18,25 +18,25 @@ class ChatListScreen extends StatelessWidget {
     final firestoreService = context.read<FirestoreService>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Mesajlarım', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('MESAJLARIM', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 16)),
+        backgroundColor: Colors.black,
         elevation: 0,
       ),
       body: StreamBuilder(
         stream: firestoreService.getChatRooms(user.uid),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Colors.white24));
           
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.chat_bubble_outline, size: 80, color: Colors.white.withAlpha(20)),
+                  Icon(Icons.chat_bubble_outline_rounded, size: 80, color: Colors.white.withOpacity(0.05)),
                   const SizedBox(height: 16),
-                  const Text('Henüz bir mesajlaşmanız yok.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  const Text('HENÜZ MESAJINIZ YOK', style: TextStyle(color: Colors.white24, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1)),
                 ],
               ),
             );
@@ -45,7 +45,8 @@ class ChatListScreen extends StatelessWidget {
           final chats = snapshot.data!.docs;
 
           return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             itemCount: chats.length,
             itemBuilder: (context, index) {
               final chatData = chats[index].data();
@@ -88,11 +89,11 @@ class _ChatCard extends StatelessWidget {
         final otherUserPhoto = otherUser['photoURL'];
 
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: isPremium ? Colors.amber.withOpacity(0.2) : Colors.white.withAlpha(10)),
+            color: const Color(0xFF0A0A0A),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: isPremium ? Colors.amber.withOpacity(0.2) : Colors.white.withOpacity(0.05)),
           ),
           child: InkWell(
             onTap: () {
@@ -110,37 +111,16 @@ class _ChatCard extends StatelessWidget {
                 ),
               );
             },
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  // PROFİL RESMİ + PRO ÇERÇEVE
-                  Stack(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: isPremium ? Colors.amber : Colors.transparent, width: 2),
-                        ),
-                        child: CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.blueAccent.withAlpha(30),
-                          backgroundImage: otherUserPhoto != null ? CachedNetworkImageProvider(otherUserPhoto) : null,
-                          child: otherUserPhoto == null ? Text(otherUserName[0].toUpperCase(), style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)) : null,
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(color: isPremium ? Colors.amber : Colors.blueAccent, shape: BoxShape.circle),
-                          child: Icon(isPremium ? Icons.workspace_premium : Icons.directions_car, size: 10, color: Colors.black),
-                        ),
-                      ),
-                    ],
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: const Color(0xFF111111),
+                    backgroundImage: otherUserPhoto != null ? CachedNetworkImageProvider(otherUserPhoto) : null,
+                    child: otherUserPhoto == null ? Text(otherUserName[0].toUpperCase(), style: const TextStyle(color: Colors.white24, fontWeight: FontWeight.bold)) : null,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -150,29 +130,21 @@ class _ChatCard extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Text(otherUserName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                                if (isPremium) ...[
-                                  const SizedBox(width: 6),
-                                  const Icon(Icons.workspace_premium, color: Colors.amber, size: 14),
-                                ],
-                              ],
-                            ),
-                            Text(formattedTime, style: TextStyle(color: Colors.white.withAlpha(50), fontSize: 12)),
+                            Text(otherUserName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+                            Text(formattedTime, style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 11, fontWeight: FontWeight.bold)),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          chatData['vehicleTitle'] ?? 'Araç İlanı',
-                          style: TextStyle(color: isPremium ? Colors.amber.withOpacity(0.8) : Colors.blueAccent, fontSize: 12, fontWeight: FontWeight.w500),
+                          chatData['vehicleTitle'] ?? 'İlan Hakkında',
+                          style: TextStyle(color: isPremium ? Colors.amber : Colors.white24, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
                           chatData['lastMessage'] ?? '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 14),
+                          style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 14),
                         ),
                       ],
                     ),

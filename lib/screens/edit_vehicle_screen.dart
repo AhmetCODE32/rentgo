@@ -23,7 +23,6 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
   @override
   void initState() {
     super.initState();
-    // Mevcut verileri doldur
     _titleController = TextEditingController(text: widget.vehicle.title);
     _priceController = TextEditingController(text: widget.vehicle.price.toInt().toString());
     _descriptionController = TextEditingController(text: widget.vehicle.description);
@@ -68,65 +67,99 @@ class _EditVehicleScreenState extends State<EditVehicleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('İlanı Düzenle')),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('İLAN DÜZENLE', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w900, fontSize: 16)),
+        backgroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: AbsorbPointer(
         absorbing: _isLoading,
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('İlan Bilgilerini Güncelle', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 24),
+                const Text(
+                  'İLAN BİLGİLERİNİ GÜNCELLE', 
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white24, letterSpacing: 2)
+                ),
+                const SizedBox(height: 32),
                 
-                TextFormField(
+                _buildInput(
                   controller: _titleController,
-                  decoration: const InputDecoration(labelText: 'İlan Başlığı', prefixIcon: Icon(Icons.title)),
+                  label: 'İlan Başlığı',
+                  icon: Icons.title_rounded,
                   validator: (v) => v!.isEmpty ? 'Başlık boş olamaz' : null,
                 ),
                 const SizedBox(height: 16),
                 
-                TextFormField(
+                _buildInput(
                   controller: _priceController,
+                  label: 'Fiyat (₺)',
+                  icon: Icons.sell_rounded,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(labelText: 'Fiyat (₺)', prefixIcon: Icon(Icons.sell_outlined)),
                   validator: (v) => v!.isEmpty ? 'Fiyat boş olamaz' : null,
                 ),
                 const SizedBox(height: 16),
                 
-                TextFormField(
+                _buildInput(
                   controller: _descriptionController,
+                  label: 'Açıklama',
+                  icon: Icons.description_rounded,
                   maxLines: 4,
-                  decoration: const InputDecoration(labelText: 'Açıklama', prefixIcon: Icon(Icons.description_outlined)),
                   validator: (v) => v!.isEmpty ? 'Açıklama boş olamaz' : null,
                 ),
                 const SizedBox(height: 16),
                 
-                TextFormField(
+                _buildInput(
                   controller: _addressController,
+                  label: 'Teslimat Adresi',
+                  icon: Icons.location_on_rounded,
                   maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Teslimat Adresi', prefixIcon: Icon(Icons.location_on_outlined)),
                   validator: (v) => v!.isEmpty ? 'Adres boş olamaz' : null,
                 ),
                 
-                const SizedBox(height: 40),
+                const SizedBox(height: 60),
                 
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _updateVehicle,
-                    child: _isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white) 
-                      : const Text('Değişiklikleri Kaydet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _updateVehicle,
+                  child: _isLoading 
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)) 
+                    : const Text('DEĞİŞİKLİKLERİ KAYDET'),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildInput({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      validator: validator,
+      style: const TextStyle(color: Colors.white, fontSize: 15),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+        prefixIcon: Icon(icon, color: Colors.white24, size: 20),
       ),
     );
   }

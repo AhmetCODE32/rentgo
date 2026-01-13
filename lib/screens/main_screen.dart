@@ -14,7 +14,6 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-// WidgetsBindingObserver ile uygulamanın ön planda mı arka planda mı olduğunu anlıyoruz
 class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final FirestoreService _firestoreService = FirestoreService();
 
@@ -27,19 +26,18 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _setStatus(true); // Uygulama açıldığında Online yap
+    _setStatus(true);
   }
 
   @override
   void dispose() {
-    _setStatus(false); // Uygulama tamamen kapanırken Offline yap (Mümkünse)
+    _setStatus(false);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Uygulama durumu değiştikçe Online/Offline durumunu güncelle
     if (state == AppLifecycleState.resumed) {
       _setStatus(true);
     } else {
@@ -70,8 +68,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             MaterialPageRoute(builder: (context) => const AddVehicleScreen()),
           );
         },
-        backgroundColor: Colors.blueAccent,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        child: const Icon(Icons.add),
         shape: const CircleBorder(),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -79,15 +78,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
-        color: const Color(0xFF020617),
+        color: const Color(0xFF0A0A0A), // Luxury Dark Card Color
         child: SizedBox(
           height: 60,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _buildNavItem(context, icon: Icons.directions_car, label: 'Araçlar', index: 0),
+              _buildNavItem(context, icon: Icons.directions_car_filled_rounded, label: 'Araçlar', index: 0),
               const SizedBox(width: 48),
-              _buildNavItem(context, icon: Icons.person, label: 'Profil', index: 1),
+              _buildNavItem(context, icon: Icons.person_rounded, label: 'Profil', index: 1),
             ],
           ),
         ),
@@ -105,9 +104,17 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected ? Colors.blueAccent : Colors.grey),
+            Icon(icon, color: isSelected ? Colors.white : Colors.white24, size: 26),
             const SizedBox(height: 4),
-            Text(label, style: TextStyle(color: isSelected ? Colors.blueAccent : Colors.grey, fontSize: 12)),
+            Text(
+              label, 
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white24, 
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                letterSpacing: 0.5,
+              )
+            ),
           ],
         ),
       ),
