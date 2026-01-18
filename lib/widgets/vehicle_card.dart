@@ -38,7 +38,6 @@ class VehicleCard extends StatelessWidget {
               child: _buildImage(context),
             ),
             
-            // Favori Butonu
             if (user != null)
               Positioned(
                 top: 12,
@@ -66,7 +65,6 @@ class VehicleCard extends StatelessWidget {
                 ),
               ),
 
-            // Fiyat Rozeti
             Positioned(
               top: 12, 
               right: 12, 
@@ -83,7 +81,6 @@ class VehicleCard extends StatelessWidget {
               )
             ),
 
-            // Bilgi Katmanı (Gradient)
             Positioned(
               bottom: 0, 
               left: 0, 
@@ -116,14 +113,30 @@ class VehicleCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.location_on_rounded, size: 12, color: Colors.white24), 
-                        const SizedBox(width: 4), 
-                        Text(
-                          vehicle.city, 
-                          style: const TextStyle(color: Colors.white24, fontSize: 12, fontWeight: FontWeight.bold)
-                        )
-                      ]
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_rounded, size: 12, color: Colors.white24), 
+                            const SizedBox(width: 4), 
+                            Text(
+                              vehicle.city, 
+                              style: const TextStyle(color: Colors.white24, fontSize: 12, fontWeight: FontWeight.bold)
+                            )
+                          ]
+                        ),
+                        // İZLENME SAYISI - GÖRÜNÜRLÜK ARTIRILDI
+                        Row(
+                          children: [
+                            Icon(Icons.visibility_rounded, size: 14, color: Colors.white.withOpacity(0.4)),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${vehicle.views}',
+                              style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11, fontWeight: FontWeight.w900),
+                            ),
+                          ],
+                        ),
+                      ],
                     )
                   ],
                 ),

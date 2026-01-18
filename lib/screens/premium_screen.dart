@@ -4,6 +4,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:provider/provider.dart';
 import 'package:rentgo/core/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PremiumScreen extends StatefulWidget {
   const PremiumScreen({super.key});
@@ -13,26 +14,39 @@ class PremiumScreen extends StatefulWidget {
 }
 
 class _PremiumScreenState extends State<PremiumScreen> {
-  bool _isProcessing = false;
+  // BUY ME A COFFEE LINKINIZI BURAYA EKLEYIN
+  final String _supportUrl = "https://www.buymeacoffee.com/alrha"; 
 
-  void _handleUpgrade(String uid) async {
-    setState(() => _isProcessing = true);
-    await context.read<FirestoreService>().upgradeToPremium(uid);
-    if (mounted) {
-      setState(() => _isProcessing = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vroomy Pro Aktif Edildi!'), backgroundColor: Colors.amber));
-      Navigator.pop(context);
+  Future<void> _launchSupportUrl() async {
+    final Uri url = Uri.parse(_supportUrl);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sayfa açılamadı, lütfen tekrar deneyin.')),
+        );
+      }
     }
   }
 
-  void _handleCancel(String uid) async {
-    setState(() => _isProcessing = true);
-    await context.read<FirestoreService>().cancelPremium(uid);
-    if (mounted) {
-      setState(() => _isProcessing = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Üyeliğiniz iptal edildi.'), backgroundColor: Colors.redAccent));
-      Navigator.pop(context);
-    }
+  void _handleManualActivation(String uid) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF0A0A0A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Colors.white10)),
+        title: const Text('DESTEK BİLDİRİMİ', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1)),
+        content: const Text(
+          'Desteğiniz için çok teşekkürler! Bildiriminiz bize ulaştı. Kontroller sonrası "Destekçi" statünüz 24 saat içinde aktif edilecektir.',
+          style: TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('TAMAM', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -50,7 +64,6 @@ class _PremiumScreenState extends State<PremiumScreen> {
           backgroundColor: Colors.black,
           body: Stack(
             children: [
-              // Luxury Background Glow
               Positioned(
                 top: -150,
                 left: -100,
@@ -59,7 +72,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
                   height: 400,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.amber.withOpacity(0.08),
+                    color: const Color(0xFFFFDD00).withOpacity(0.05),
                   ),
                 ),
               ),
@@ -107,7 +120,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
             onPressed: () => Navigator.pop(context)
           ),
           const Text(
-            'VROOMY PRO', 
+            'DESTEK OL', 
             style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 3)
           ),
           const SizedBox(width: 48),
@@ -124,14 +137,14 @@ class _PremiumScreenState extends State<PremiumScreen> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: const Color(0xFF111111),
-            border: Border.all(color: Colors.amber.withOpacity(0.3)),
-            boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.1), blurRadius: 40, spreadRadius: 5)],
+            border: Border.all(color: const Color(0xFFFFDD00).withOpacity(0.3)),
+            boxShadow: [BoxShadow(color: const Color(0xFFFFDD00).withOpacity(0.1), blurRadius: 40, spreadRadius: 5)],
           ),
-          child: Icon(isPremium ? Icons.workspace_premium_rounded : Icons.bolt_rounded, size: 64, color: Colors.amber),
+          child: const Icon(Icons.coffee_rounded, size: 64, color: Color(0xFFFFDD00)),
         ),
         const SizedBox(height: 32),
         Text(
-          isPremium ? 'PRO ÜYELİK AKTİF' : 'SINIRLARI ZORLAYIN',
+          isPremium ? 'GÖNÜLDEN TEŞEKKÜRLER' : 'BİR KAHVE ISMARLA',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1),
         ),
@@ -139,9 +152,11 @@ class _PremiumScreenState extends State<PremiumScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Text(
-            isPremium ? 'Tüm pro ayrıcalıklara sahipsiniz.' : 'İlanlarınız en tepede görünsün, komisyonsuz kiralayın.',
+            isPremium 
+              ? 'Desteğiniz sayesinde Vroomy büyümeye devam ediyor.' 
+              : 'Vroomy tamamen ücretsiz bir platformdur. Gelişimimize katkıda bulunmak için bize bir kahve ısmarlayabilirsin.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 16, height: 1.5),
+            style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 16, height: 1.6),
           ),
         ),
       ],
@@ -150,10 +165,10 @@ class _PremiumScreenState extends State<PremiumScreen> {
 
   Widget _buildFeatureList() {
     final features = [
-      {'icon': Icons.bolt_rounded, 'title': 'Hızlı Listeleme', 'desc': 'İlanlarınız her zaman en üstte'},
-      {'icon': Icons.verified_rounded, 'title': 'Altın Rozet', 'desc': 'Güvenilir satıcı statüsü'},
-      {'icon': Icons.analytics_rounded, 'title': 'Detaylı Analiz', 'desc': 'İlan performansını takip edin'},
-      {'icon': Icons.support_agent_rounded, 'title': 'VIP Destek', 'desc': '7/24 öncelikli müşteri hattı'},
+      {'icon': Icons.favorite_rounded, 'title': 'Platformu Yaşat', 'desc': 'Sunucu ve geliştirme masraflarına katkıda bulun'},
+      {'icon': Icons.stars_rounded, 'title': 'Destekçi Rozeti', 'desc': 'Profilinde şık bir Supporter ikonu kazanın'},
+      {'icon': Icons.auto_awesome_rounded, 'title': 'Sıcak Teşekkür', 'desc': 'Topluluğumuzun en değerli parçası olun'},
+      {'icon': Icons.volunteer_activism_rounded, 'title': 'Geleceği İnşa Et', 'desc': 'Yeni özelliklerin daha hızlı gelmesini sağla'},
     ];
 
     return Column(
@@ -192,22 +207,19 @@ class _PremiumScreenState extends State<PremiumScreen> {
   }
 
   Widget _buildPremiumInfo(Map<String, dynamic> data) {
-    if (data['premiumExpiryDate'] == null) return const SizedBox.shrink();
-    final expiry = (data['premiumExpiryDate'] as Timestamp).toDate();
-    final diff = expiry.difference(DateTime.now()).inDays;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
       decoration: BoxDecoration(
-        color: Colors.amber.withOpacity(0.05),
+        color: const Color(0xFFFFDD00).withOpacity(0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.amber.withOpacity(0.1)),
+        border: Border.all(color: const Color(0xFFFFDD00).withOpacity(0.1)),
       ),
-      child: Row(
+      child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.timer_outlined, color: Colors.amber, size: 18),
+          Icon(Icons.stars_rounded, color: Color(0xFFFFDD00), size: 18),
           const SizedBox(width: 10),
-          Text('Yenilenmeye $diff gün kaldı', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
+          Text('DESTEKÇİ ÜYE', style: TextStyle(color: Color(0xFFFFDD00), fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
         ],
       ),
     );
@@ -224,38 +236,46 @@ class _PremiumScreenState extends State<PremiumScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (!isPremium) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                const Text('₺199', style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900)),
-                Text('.99', style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 18, fontWeight: FontWeight.w900)),
-                Text(' / AY', style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1)),
-              ],
-            ),
-            const SizedBox(height: 24),
-          ],
-          SizedBox(
-            width: double.infinity,
-            height: 64,
-            child: ElevatedButton(
-              onPressed: _isProcessing ? null : () => isPremium ? _handleCancel(uid) : _handleUpgrade(uid),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isPremium ? Colors.transparent : Colors.white,
-                foregroundColor: isPremium ? Colors.redAccent : Colors.black,
-                elevation: 0,
-                side: isPremium ? const BorderSide(color: Colors.redAccent, width: 2) : BorderSide.none,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            SizedBox(
+              width: double.infinity,
+              height: 64,
+              child: ElevatedButton(
+                onPressed: _launchSupportUrl,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFFDD00), 
+                  foregroundColor: Colors.black,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.coffee_rounded, size: 20),
+                    SizedBox(width: 12),
+                    Text('KAHVE ISMARLA', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.5)),
+                  ],
+                ),
               ),
-              child: _isProcessing 
-                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 3))
-                : Text(
-                    isPremium ? 'ÜYELİĞİ İPTAL ET' : 'HEMEN BAŞLA',
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.5),
-                  ),
             ),
-          ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => _handleManualActivation(uid),
+              child: Text(
+                'ZATEN DESTEK OLDUM',
+                style: TextStyle(color: Colors.white.withOpacity(0.3), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1),
+              ),
+            ),
+          ] else ...[
+            const Text(
+              'TEŞEKKÜRLER!',
+              style: TextStyle(color: Color(0xFFFFDD00), fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 2),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Desteğin bizim için paha biçilemez.',
+              style: TextStyle(color: Colors.white24, fontSize: 13),
+            ),
+          ],
         ],
       ),
     );

@@ -140,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 32),
 
-                    // Google Login Button
+                    // Google Login Button (Sadece Google kaldı)
                     FadeInUp(
                       delay: const Duration(milliseconds: 500),
                       child: OutlinedButton(
@@ -148,6 +148,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: Colors.white.withOpacity(0.1)),
                           backgroundColor: const Color(0xFF0A0A0A),
+                          minimumSize: const Size.fromHeight(60),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,

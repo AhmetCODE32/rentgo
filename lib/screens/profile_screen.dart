@@ -9,7 +9,6 @@ import 'package:rentgo/core/firestore_service.dart';
 import 'package:rentgo/screens/chat_list_screen.dart';
 import 'package:rentgo/screens/edit_profile_screen.dart';
 import 'package:rentgo/screens/favorites_screen.dart';
-import 'package:rentgo/screens/invoices_screen.dart';
 import 'package:rentgo/screens/notifications_screen.dart';
 import 'package:rentgo/screens/premium_screen.dart';
 import '../models/review.dart';
@@ -32,7 +31,6 @@ class ProfileScreen extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) return const Scaffold(body: Center(child: CircularProgressIndicator()));
         
         final userData = snapshot.data?.data() ?? {};
-        final bool isPremium = userData['isPremium'] ?? false;
         final displayName = userData['displayName'] ?? 'Kullanıcı';
         final photoURL = userData['photoURL'];
         final bio = userData['bio'] ?? '';
@@ -41,322 +39,281 @@ class ProfileScreen extends StatelessWidget {
         final int unreadCount = userData['unreadCount'] ?? 0;
 
         return Scaffold(
-          backgroundColor: Colors.black, // PROJE TASARIMINA UYGUN TAM SİYAH
-          body: Stack(
-            children: [
-              _buildBackgroundGlow(isPremium),
-              CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverAppBar(
-                    expandedHeight: 0,
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    pinned: true,
-                    title: FadeInLeft(child: const Text('VROOMY', style: TextStyle(letterSpacing: 4, fontWeight: FontWeight.w900, fontSize: 18))),
-                    actions: [
-                      IconButton(
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditProfileScreen(userData: userData))),
-                        icon: const Icon(Icons.more_vert_rounded),
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: const Padding(
+              padding: EdgeInsets.only(left: 20),
+              child: Center(child: Text('VROOMY', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w900, fontSize: 12, color: Colors.white24))),
+            ),
+            leadingWidth: 100,
+            actions: [
+              IconButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => EditProfileScreen(userData: userData))),
+                icon: const Icon(Icons.tune_rounded, color: Colors.white70),
+              ),
+              const SizedBox(width: 12),
+            ],
+          ),
+          body: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                
+                // 1. CENTERED PROFILE HERO
+                _buildCenteredHero(displayName, photoURL, isVerified, city),
+                
+                const SizedBox(height: 40),
+
+                // 2. UNIFIED STATS BAR
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _buildUnifiedStats(firestoreService, user.uid, isVerified),
+                ),
+
+                const SizedBox(height: 40),
+
+                // 3. SUPPORT ACTION
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _buildModernSupportTile(context),
+                ),
+
+                const SizedBox(height: 40),
+
+                // 4. MODERN LIST ACTIONS
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('KONTROL PANELİ', style: TextStyle(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 2)),
+                      const SizedBox(height: 20),
+                      _buildModernListTile(
+                        context, 
+                        icon: Icons.directions_car_filled_rounded, 
+                        title: 'İlanlarımı Yönet', 
+                        subtitle: 'Yayındaki araçlarını kontrol et',
+                        color: Colors.blueAccent, 
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyListingsScreen()))
+                      ),
+                      _buildModernListTile(
+                        context, 
+                        icon: Icons.notifications_active_rounded, 
+                        title: 'Bildirimler', 
+                        subtitle: 'Sana gelen son aktiviteler',
+                        color: Colors.orangeAccent, 
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))
+                      ),
+                      _buildModernListTile(
+                        context, 
+                        icon: Icons.chat_bubble_rounded, 
+                        title: 'Mesajlar', 
+                        subtitle: 'Kullanıcılarla olan sohbetlerin',
+                        color: Colors.purpleAccent, 
+                        badge: unreadCount,
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen()))
+                      ),
+                      _buildModernListTile(
+                        context, 
+                        icon: Icons.favorite_rounded, 
+                        title: 'Favoriler', 
+                        subtitle: 'Kaydettiğin özel ilanlar',
+                        color: Colors.redAccent, 
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()))
                       ),
                     ],
                   ),
+                ),
 
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 20),
-                          _buildProfileHero(displayName, photoURL, isPremium, isVerified),
-                          const SizedBox(height: 30),
-                          _buildBioSection(city, bio),
-                          const SizedBox(height: 40),
-                          _buildModernStats(firestoreService, user.uid, isPremium),
-                          const SizedBox(height: 40),
-                          _buildPremiumStatusCard(context, isPremium),
-                          const SizedBox(height: 32),
-                          const Text('KONTROL MERKEZİ', style: TextStyle(color: Colors.white24, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
-                          const SizedBox(height: 16),
-                          _buildActionCards(context, unreadCount, isPremium),
-                          const SizedBox(height: 40),
-                          Center(
-                            child: GestureDetector(
-                              onTap: () => context.read<AuthService>().signOut(),
-                              child: Text(
-                                'OTURUMU KAPAT',
-                                style: TextStyle(
-                                  color: Colors.redAccent.withOpacity(0.6),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 100),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 60),
+                
+                // LOGOUT
+                TextButton(
+                  onPressed: () => context.read<AuthService>().signOut(),
+                  child: Text('OTURUMU KAPAT', style: TextStyle(color: Colors.redAccent.withOpacity(0.5), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 2)),
+                ),
+                
+                const SizedBox(height: 100),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildBackgroundGlow(bool isPremium) {
-    return Positioned(
-      top: -100,
-      left: -50,
-      child: Container(
-        width: 300,
-        height: 300,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: (isPremium ? Colors.amber : Colors.blueAccent).withOpacity(0.15),
-              blurRadius: 100,
-              spreadRadius: 50,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileHero(String name, String? photo, bool isPremium, bool isVerified) {
-    return Row(
-      children: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            if (isPremium)
+  Widget _buildCenteredHero(String name, String? photo, bool isVerified, String city) {
+    return FadeInDown(
+      child: Column(
+        children: [
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
               Container(
-                width: 90,
-                height: 90,
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.amber.withOpacity(0.5), width: 1),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: const Color(0xFF111111),
+                  backgroundImage: photo != null ? NetworkImage(photo) : null,
+                  child: photo == null ? Text(name[0], style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white)) : null,
                 ),
               ),
-            Container(
-              width: 75,
-              height: 75,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white10,
-                image: photo != null ? DecorationImage(image: NetworkImage(photo), fit: BoxFit.cover) : null,
-              ),
-              child: photo == null ? Center(child: Text(name[0], style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold))) : null,
-            ),
-          ],
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      name,
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -1),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (isVerified) const Icon(Icons.verified, color: Colors.blueAccent, size: 20),
-                ],
-              ),
-              if (isPremium)
-                const Text('VROOMY PRO DRIVER', style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 2)),
+              if (isVerified)
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
+                  child: const Icon(Icons.verified_rounded, color: Colors.white, size: 18),
+                ),
             ],
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBioSection(String city, String bio) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.location_on_rounded, color: Colors.white24, size: 14),
-            const SizedBox(width: 4),
-            Text(city, style: const TextStyle(color: Colors.white24, fontSize: 14)),
-          ],
-        ),
-        if (bio.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            bio,
-            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 15, height: 1.5),
+          const SizedBox(height: 20),
+          Text(name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1)),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.location_on_rounded, color: Colors.white24, size: 14),
+              const SizedBox(width: 4),
+              Text(city.toUpperCase(), style: const TextStyle(color: Colors.white24, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+            ],
           ),
         ],
-      ],
+      ),
     );
   }
 
-  Widget _buildModernStats(FirestoreService service, String uid, bool isPremium) {
+  Widget _buildUnifiedStats(FirestoreService service, String uid, bool isVerified) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 10),
+      padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
         color: const Color(0xFF0A0A0A),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: Colors.white.withOpacity(0.03)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatBlock(
-            'PUAN',
-            StreamBuilder<QuerySnapshot<Review>>(
-              stream: service.getUserReviews(uid),
-              builder: (context, snapshot) {
-                final reviews = snapshot.data?.docs ?? [];
-                double avg = reviews.isEmpty ? 0.0 : reviews.fold(0.0, (p, e) => p + e.data().rating) / reviews.length;
-                return Text(avg == 0.0 ? '0.0' : avg.toStringAsFixed(1), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900));
-              },
-            ),
-          ),
-          _buildStatBlock(
-            'İLAN',
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('vehicles').where('userId', isEqualTo: uid).snapshots(),
-              builder: (context, snapshot) => Text('${snapshot.data?.docs.length ?? 0}', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-            ),
-          ),
-          _buildStatBlock(
-            'GÜVEN',
-            StreamBuilder<QuerySnapshot<Booking>>(
-              stream: service.getOwnerBookings(uid),
-              builder: (context, snapshot) {
-                final completed = snapshot.data?.docs.where((b) => b.data().status == BookingStatus.completed).length ?? 0;
-                return Text(completed > 5 ? 'A+' : (completed > 0 ? 'B' : 'S'), style: const TextStyle(color: Colors.blueAccent, fontSize: 22, fontWeight: FontWeight.w900));
-              },
-            ),
-          ),
+          Expanded(child: _buildStatItem('PUAN', StreamBuilder<QuerySnapshot<Review>>(
+            stream: service.getUserReviews(uid),
+            builder: (context, snapshot) {
+              final reviews = snapshot.data?.docs ?? [];
+              double avg = reviews.isEmpty ? 0.0 : reviews.fold(0.0, (p, e) => p + e.data().rating) / reviews.length;
+              return Text(avg == 0.0 ? '0.0' : avg.toStringAsFixed(1), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900));
+            },
+          ))),
+          Container(width: 1, height: 30, color: Colors.white.withOpacity(0.05)),
+          Expanded(child: _buildStatItem('İLAN', StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('vehicles').where('userId', isEqualTo: uid).snapshots(),
+            builder: (context, snapshot) => Text('${snapshot.data?.docs.length ?? 0}', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+          ))),
+          Container(width: 1, height: 30, color: Colors.white.withOpacity(0.05)),
+          Expanded(child: _buildStatItem('GÜVEN', StreamBuilder<QuerySnapshot<Review>>(
+            stream: service.getUserReviews(uid),
+            builder: (context, snapshot) {
+              final reviewCount = snapshot.data?.docs.length ?? 0;
+              final reviews = snapshot.data?.docs ?? [];
+              double avg = reviews.isEmpty ? 0.0 : reviews.fold(0.0, (p, e) => p + e.data().rating) / reviews.length;
+              String rank = 'S'; Color color = Colors.white24;
+              if (isVerified) { rank = 'B'; color = Colors.blueAccent; if (reviewCount >= 3 && avg >= 4.0) { rank = 'A'; color = Colors.greenAccent; } if (reviewCount >= 10 && avg >= 4.5) { rank = 'A+'; color = Colors.amber; } }
+              return Text(rank, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900));
+            },
+          ))),
         ],
       ),
     );
   }
 
-  Widget _buildStatBlock(String label, Widget value) {
+  Widget _buildStatItem(String label, Widget value) {
     return Column(
       children: [
         value,
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.white24, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(color: Colors.white24, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1)),
       ],
     );
   }
 
-  Widget _buildPremiumStatusCard(BuildContext context, bool isPremium) {
-    return GestureDetector(
+  Widget _buildModernSupportTile(BuildContext context) {
+    return InkWell(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen())),
+      borderRadius: BorderRadius.circular(24),
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isPremium ? Colors.amber.withOpacity(0.05) : Colors.blueAccent.withOpacity(0.05),
+          color: const Color(0xFFFFDD00).withOpacity(0.05),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: (isPremium ? Colors.amber : Colors.blueAccent).withOpacity(0.2)),
+          border: Border.all(color: const Color(0xFFFFDD00).withOpacity(0.1)),
         ),
         child: Row(
           children: [
-            Icon(isPremium ? Icons.verified : Icons.star_outline_rounded, color: isPremium ? Colors.amber : Colors.blueAccent),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFFFDD00).withOpacity(0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.coffee_rounded, color: Color(0xFFFFDD00), size: 20),
+            ),
             const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                isPremium ? 'PRO ÜYELİĞİNİZ AKTİF' : 'PRO\'YA GEÇİŞ YAPIN',
-                style: TextStyle(
-                  color: isPremium ? Colors.amber : Colors.blueAccent,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  letterSpacing: 1.5,
-                ),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('BİZE DESTEK OL', style: TextStyle(color: Color(0xFFFFDD00), fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 1)),
+                  Text('Gönüllü bir kahve ısmarla', style: TextStyle(color: Colors.white24, fontSize: 11, fontWeight: FontWeight.bold)),
+                ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFFFFDD00), size: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionCards(BuildContext context, int unreadCount, bool isPremium) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: _buildActionCard(context, Icons.directions_car_filled, 'İLANLARIM', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyListingsScreen())))),
-            const SizedBox(width: 12),
-            Expanded(child: _buildActionCard(context, Icons.notifications_rounded, 'BİLDİRİMLER', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())))),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildActionCard(context, Icons.chat_bubble_rounded, 'MESAJLAR', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen())), badge: unreadCount)),
-            const SizedBox(width: 12),
-            Expanded(child: _buildActionCard(context, Icons.favorite_rounded, 'FAVORİLER', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen())))),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (isPremium)
-          FadeInUp(
-            child: _buildActionCard(
-              context, 
-              Icons.receipt_long_rounded, 
-              'FATURALARIM', 
-              () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoicesScreen())),
-              isWide: true
-            ),
+  Widget _buildModernListTile(BuildContext context, {required IconData icon, required String title, required String subtitle, required Color color, required VoidCallback onTap, int badge = 0}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0A0A0A),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(0.03)),
           ),
-      ],
-    );
-  }
-
-  Widget _buildActionCard(BuildContext context, IconData icon, String title, VoidCallback onTap, {int badge = 0, bool isWide = false}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: isWide ? double.infinity : null,
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0A0A0A),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.03)),
-        ),
-        child: Column(
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(icon, color: Colors.white, size: 22),
-                if (badge > 0)
-                  Positioned(
-                    top: -5,
-                    right: -5,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
-                      child: Text('$badge', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(title, style: const TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
-          ],
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: color.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: -0.2)),
+                    Text(subtitle, style: const TextStyle(color: Colors.white24, fontSize: 11, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+              if (badge > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.blueAccent, borderRadius: BorderRadius.circular(10)),
+                  child: Text('$badge', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                )
+              else
+                const Icon(Icons.chevron_right_rounded, color: Colors.white10, size: 18),
+            ],
+          ),
         ),
       ),
     );

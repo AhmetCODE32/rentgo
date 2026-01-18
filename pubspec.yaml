@@ -23,16 +23,23 @@ dependencies:
   shimmer: ^3.0.0
   animate_do: ^3.3.4
   cached_network_image: ^3.3.1
-  google_maps_flutter: ^2.7.0
   url_launcher: ^6.3.0
   firebase_messaging: ^14.9.4
   flutter_local_notifications: ^17.1.2
-  share_plus: ^10.0.0 # DÜZELTİLDİ: Sürüm çakışmasını çözmek için 10.0.0 yapıldı
+  share_plus: ^10.0.0
+  firebase_app_check: ^0.2.1+18
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "app_icon/2.jpg"
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true

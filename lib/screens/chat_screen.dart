@@ -7,6 +7,7 @@ import 'package:rentgo/core/firestore_service.dart';
 import 'package:rentgo/core/notification_service.dart';
 import 'package:rentgo/models/message.dart';
 import 'package:intl/intl.dart';
+import 'package:rentgo/screens/add_review_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String roomId;
@@ -89,12 +90,16 @@ class _ChatScreenState extends State<ChatScreen> {
     if (user == null) return const Scaffold(body: Center(child: Text('Lütfen giriş yapın.')));
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.black, // TAM SİYAH
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.black, // TAM SİYAH
         centerTitle: false,
         titleSpacing: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
           stream: _firestoreService.getUserProfileStream(widget.otherUserId),
           builder: (context, snapshot) {
@@ -102,7 +107,6 @@ class _ChatScreenState extends State<ChatScreen> {
             final photoURL = otherUserData?['photoURL'];
             final displayName = otherUserData?['displayName'] ?? '...';
             final isOnline = otherUserData?['isOnline'] ?? false;
-            final bool isPremium = otherUserData?['isPremium'] ?? false;
 
             return Row(
               children: [
@@ -129,6 +133,24 @@ class _ChatScreenState extends State<ChatScreen> {
             );
           },
         ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddReviewScreen(
+                    targetUserId: widget.otherUserId,
+                    targetUserName: "Kullanıcı", 
+                    vehicleTitle: widget.vehicleTitle,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.star_border_rounded, color: Colors.white70),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
@@ -144,6 +166,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 return ListView.builder(
                   controller: _scrollController,
                   reverse: true,
+                  physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
@@ -154,7 +177,6 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          _buildQuickActions(user!.uid),
           _buildMessageInput(),
         ],
       ),
@@ -171,16 +193,23 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: CachedNetworkImage(imageUrl: widget.vehicleImage, width: 40, height: 40, fit: BoxFit.cover),
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImage(imageUrl: widget.vehicleImage, width: 44, height: 44, fit: BoxFit.cover, errorWidget: (c,u,e) => Container(color: Colors.white10, child: const Icon(Icons.directions_car, size: 20))),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              widget.vehicleTitle.toUpperCase(), 
-              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.vehicleTitle.toUpperCase(), 
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                const Text('İLAN DETAYLARINI GÖR', style: TextStyle(color: Colors.white24, fontSize: 9, fontWeight: FontWeight.bold)),
+              ],
             ),
           ),
         ],
@@ -188,49 +217,20 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildQuickActions(String uid) {
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: _firestoreService.getUserProfileStream(uid),
-      builder: (context, snapshot) {
-        final isPremium = snapshot.data?.data()?['isPremium'] ?? false;
-        if (!isPremium) return const SizedBox.shrink();
-
-        final quickMessages = ['Hala kiralık mı?', 'İndirim olur mu?', 'Konum atar mısınız?'];
-
-        return Container(
-          height: 45,
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: quickMessages.length,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ActionChip(
-                  label: Text(quickMessages[index], style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
-                  backgroundColor: const Color(0xFF0A0A0A),
-                  side: const BorderSide(color: Colors.white10),
-                  onPressed: () => _sendMessage(quickMessages[index]),
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildMessageInput() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 40),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
       decoration: const BoxDecoration(color: Colors.black),
       child: Row(
         children: [
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(color: const Color(0xFF0A0A0A), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A0A0A), 
+                borderRadius: BorderRadius.circular(24), 
+                border: Border.all(color: Colors.white.withOpacity(0.05))
+              ),
               child: TextField(
                 controller: _messageController,
                 style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -246,7 +246,7 @@ class _ChatScreenState extends State<ChatScreen> {
           GestureDetector(
             onTap: () => _sendMessage(),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
               child: const Icon(Icons.send_rounded, color: Colors.black, size: 20),
             ),
@@ -270,21 +270,26 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Container(
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
             margin: const EdgeInsets.symmetric(vertical: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
               color: isMe ? Colors.white : const Color(0xFF0A0A0A),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: Radius.circular(isMe ? 20 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 20),
+              ),
               border: isMe ? null : Border.all(color: Colors.white.withOpacity(0.05)),
             ),
             child: Text(
               message.text ?? '',
-              style: TextStyle(color: isMe ? Colors.black : Colors.white70, fontSize: 14, fontWeight: isMe ? FontWeight.w600 : FontWeight.normal),
+              style: TextStyle(color: isMe ? Colors.black : Colors.white70, fontSize: 14, fontWeight: isMe ? FontWeight.w600 : FontWeight.w500),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             child: Text(
               DateFormat('HH:mm').format(message.createdAt),
               style: const TextStyle(color: Colors.white10, fontSize: 9, fontWeight: FontWeight.bold),

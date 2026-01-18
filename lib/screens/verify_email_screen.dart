@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:animate_do/animate_do.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:rentgo/core/auth_service.dart';
@@ -21,7 +22,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     isEmailVerified = FirebaseAuth.instance.currentUser!.emailVerified;
 
     if (!isEmailVerified) {
-      // Her 3 saniyede bir kullanıcının onay durumunu kontrol et
       timer = Timer.periodic(
         const Duration(seconds: 3),
         (_) => checkEmailVerified(),
@@ -30,16 +30,12 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   }
 
   Future<void> checkEmailVerified() async {
-    // Kullanıcı durumunu Firebase'den yeniden yükle
     await FirebaseAuth.instance.currentUser!.reload();
-
     setState(() {
       isEmailVerified = FirebaseAuth.instance.currentUser!.emailVerified;
     });
-
     if (isEmailVerified) {
       timer?.cancel();
-      // AuthGate, değişikliği zaten dinlediği için yönlendirme otomatik olacak.
     }
   }
 
@@ -52,54 +48,80 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text("E-posta Onayı"),
+        title: const Text('ONAY BEKLENİYOR', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w900, fontSize: 14)),
+        backgroundColor: Colors.black,
+        elevation: 0,
         automaticallyImplyLeading: false,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Hesabınızı doğrulamak için bir onay linki e-posta adresinize gönderildi.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 24),
-            const Icon(Icons.email_outlined, size: 100, color: Colors.blueAccent),
-            const SizedBox(height: 24),
-            const Text(
-              'Lütfen gelen kutunuzu kontrol edin ve linke tıklayın. Onayladığınızda uygulama otomatik olarak devam edecektir.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FadeInDown(
+                child: Container(
+                  padding: const EdgeInsets.all(40),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A0A0A),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  ),
+                  child: const Icon(Icons.mark_email_unread_rounded, size: 80, color: Colors.white),
+                ),
               ),
-              icon: const Icon(Icons.send),
-              label: const Text('Onay Mailini Tekrar Gönder'),
-              onPressed: () {
-                try {
-                  FirebaseAuth.instance.currentUser!.sendEmailVerification();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Yeni bir onay maili gönderildi.')),
-                  );
-                } catch (e) {
-                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Mail gönderilemedi: ${e.toString()}')),
-                  );
-                }
-              },
-            ),
-            TextButton(
-              onPressed: () => _authService.signOut(),
-              child: const Text('İptal Et / Çıkış Yap', style: TextStyle(color: Colors.redAccent)),
-            ),
-          ],
+              const SizedBox(height: 64),
+              FadeInUp(
+                child: const Text(
+                  "E-POSTA ONAYI",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1),
+                ),
+              ),
+              const SizedBox(height: 16),
+              FadeInUp(
+                delay: const Duration(milliseconds: 200),
+                child: Text(
+                  'Hesabınızı doğrulamak için bir onay linki adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white.withOpacity(0.3), height: 1.6, fontSize: 15, fontWeight: FontWeight.w500),
+                ),
+              ),
+              const SizedBox(height: 64),
+              
+              FadeInUp(
+                delay: const Duration(milliseconds: 400),
+                child: ElevatedButton(
+                  onPressed: () {
+                    try {
+                      FirebaseAuth.instance.currentUser!.sendEmailVerification();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Onay maili tekrar gönderildi.')),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bir hata oluştu.')));
+                    }
+                  },
+                  child: const Text('TEKRAR GÖNDER'),
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              FadeInUp(
+                delay: const Duration(milliseconds: 600),
+                child: TextButton(
+                  onPressed: () => _authService.signOut(),
+                  child: Text(
+                    'İPTAL ET VE ÇIKIŞ YAP',
+                    style: TextStyle(color: Colors.redAccent.withOpacity(0.6), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -12,26 +12,27 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Yükleniyor durumu
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
+            backgroundColor: Colors.black,
             body: Center(
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(color: Colors.white24),
             ),
           );
         }
 
-        // Kullanıcı giriş yapmış mı?
         if (snapshot.hasData) {
-          // E-postası onaylı mı?
-          if (snapshot.data!.emailVerified) {
-            return const MainScreen(); // Onaylıysa ana ekran
+          // GOOGLE VEYA TELEFON GİRİŞİNDE E-POSTA ONAYINA BAKMA
+          final user = snapshot.data!;
+          bool isSocialLogin = user.providerData.any((p) => p.providerId == 'google.com' || p.providerId == 'phone');
+          
+          if (user.emailVerified || isSocialLogin) {
+            return const MainScreen();
           } else {
-            return const VerifyEmailScreen(); // Onaylı değilse bekleme odası
+            return const VerifyEmailScreen();
           }
         }
 
-        // Kullanıcı giriş yapmamışsa giriş ekranını göster
         return const LoginScreen();
       },
     );

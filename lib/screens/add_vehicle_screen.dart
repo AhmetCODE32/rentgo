@@ -9,7 +9,6 @@ import 'package:rentgo/core/firestore_service.dart';
 import 'package:rentgo/core/storage_service.dart';
 import '../core/app_state.dart';
 import '../models/vehicle.dart';
-import 'premium_screen.dart';
 
 class AddVehicleScreen extends StatefulWidget {
   const AddVehicleScreen({super.key});
@@ -66,19 +65,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     final user = Provider.of<User?>(context, listen: false);
     if (user == null) return;
 
-    final appState = context.read<AppState>();
-    final userDoc = await FirestoreService().getUserProfileStream(user.uid).first;
-    final userData = userDoc.data() ?? {};
-    final bool isPremium = userData['isPremium'] ?? false;
-    final int myListingCount = appState.allVehicles.where((v) => v.userId == user.uid).length;
-
-    // LIMIT KONTROLÜ: Pro değilse ve 3 ilanı varsa engelle
-    if (!isPremium && myListingCount >= 3) {
-      if(!mounted) return;
-      _showLimitDialog();
-      return;
-    }
-
     if (!_formKey.currentState!.validate()) {
       _showError('Lütfen tüm zorunlu alanları doldurun.');
       return;
@@ -100,7 +86,10 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     });
 
     try {
+      final userDoc = await FirestoreService().getUserProfileStream(user.uid).first;
+      final userData = userDoc.data() ?? {};
       final userCity = userData['city'];
+
       if (userCity == null || userCity.isEmpty) throw 'Lütfen önce profilinizden şehrinizi seçin.';
 
       final List<String> imageUrls = await _storageService.uploadVehicleImages(_images);
@@ -138,32 +127,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _showLimitDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF0A0A0A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Colors.white10)),
-        title: const Text('İLAN LİMİTİNE ULAŞILDI', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1)),
-        content: const Text(
-          'Standart hesaplar en fazla 3 ilan verebilir. Sınırsız ilan ve daha fazla özellik için Pro hesabına geçebilirsiniz.',
-          style: TextStyle(color: Colors.white70, fontSize: 13),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('KAPAT', style: TextStyle(color: Colors.white24, fontWeight: FontWeight.w900))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black, minimumSize: const Size(120, 40)),
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
-            },
-            child: const Text('PRO\'YA GEÇ', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showError(String message) {
@@ -241,15 +204,15 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 
                 const SizedBox(height: 32),
                 const _SectionTitle(title: 'GENEL BİLGİLER'),
-                _Input(controller: _titleController, hint: 'İlan Başlığı', icon: Icons.title_rounded),
+                _buildInput(controller: _titleController, hint: 'İlan Başlığı', icon: Icons.title_rounded),
                 const SizedBox(height: 16),
-                _Input(controller: _priceController, hint: 'Günlük Fiyat (₺)', icon: Icons.sell_rounded, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
+                _buildInput(controller: _priceController, hint: 'Günlük Fiyat (₺)', icon: Icons.sell_rounded, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
                 const SizedBox(height: 16),
-                _Input(controller: _descriptionController, hint: 'Açıklama', icon: Icons.description_rounded, maxLines: 4),
+                _buildInput(controller: _descriptionController, hint: 'Açıklama', icon: Icons.description_rounded, maxLines: 4),
                 
                 const SizedBox(height: 32),
                 const _SectionTitle(title: 'KONUM VE İLETİŞİM'),
-                _Input(controller: _addressController, hint: 'Teslimat Adresi', icon: Icons.location_on_rounded, maxLines: 2),
+                _buildInput(controller: _addressController, hint: 'Teslimat Adresi', icon: Icons.location_on_rounded, maxLines: 2),
                 
                 const SizedBox(height: 16),
                 Container(
@@ -313,6 +276,21 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
 
   Widget _buildImageListView() => ListView.builder(scrollDirection: Axis.horizontal, itemCount: _images.length, itemBuilder: (context, index) => Stack(children: [Container(width: 100, height: 100, margin: const EdgeInsets.only(right: 12), decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), image: DecorationImage(image: FileImage(_images[index]), fit: BoxFit.cover), border: Border.all(color: Colors.white10))), Positioned(top: 4, right: 16, child: GestureDetector(onTap: () => setState(() => _images.removeAt(index)), child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle), child: const Icon(Icons.close, size: 14, color: Colors.white))))]));
   Widget _buildImagePicker() => InkWell(onTap: _pickImages, borderRadius: BorderRadius.circular(20), child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 32), decoration: BoxDecoration(color: const Color(0xFF0A0A0A), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(0.05))), child: const Column(children: [Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 32), SizedBox(height: 12), Text('FOTOĞRAF EKLE', style: TextStyle(color: Colors.white24, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1))])));
+
+  Widget _buildInput({required TextEditingController controller, required String hint, required IconData icon, int maxLines = 1, TextInputType keyboardType = TextInputType.text, List<TextInputFormatter>? inputFormatters}) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      style: const TextStyle(color: Colors.white, fontSize: 15),
+      decoration: InputDecoration(
+        labelText: hint,
+        labelStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+        prefixIcon: Icon(icon, color: Colors.white24, size: 20),
+      ),
+    );
+  }
 }
 
 class _CategoryCard extends StatelessWidget {
@@ -347,25 +325,6 @@ class _SectionTitle extends StatelessWidget {
   const _SectionTitle({required this.title});
   @override
   Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white24, letterSpacing: 2)));
-}
-
-class _Input extends StatelessWidget {
-  final TextEditingController controller; final String hint; final IconData icon; final int maxLines; final TextInputType keyboardType; final List<TextInputFormatter>? inputFormatters; final String? Function(String?)? validator;
-  const _Input({required this.controller, required this.hint, required this.icon, this.maxLines = 1, this.keyboardType = TextInputType.text, this.inputFormatters, this.validator});
-  @override
-  Widget build(BuildContext context) => TextFormField(
-    controller: controller, 
-    maxLines: maxLines, 
-    keyboardType: keyboardType, 
-    inputFormatters: inputFormatters, 
-    validator: validator, 
-    style: const TextStyle(color: Colors.white, fontSize: 15),
-    decoration: InputDecoration(
-      labelText: hint, 
-      labelStyle: const TextStyle(color: Colors.white24, fontSize: 13),
-      prefixIcon: Icon(icon, color: Colors.white24, size: 20),
-    )
-  );
 }
 
 class _DropdownInput<T> extends StatelessWidget {

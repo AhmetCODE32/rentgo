@@ -110,6 +110,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  // YENİ: TELEFON NUMARASINI KALDIRMA FONKSİYONU
+  Future<void> _removePhoneNumber() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = Provider.of<User?>(context, listen: false);
+      if (user != null) {
+        await FirestoreService().updateUserProfile(
+          user.uid,
+          isPhoneVerified: false,
+          phoneNumber: '',
+        );
+        setState(() {
+          _isLocallyVerified = false;
+          _verifiedPhoneNumber = '';
+          _phoneController.clear();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Telefon numarası kaldırıldı.')));
+      }
+    } catch (e) {
+      _showError('Numara kaldırılamadı.');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _saveProfile() async {
     if (_selectedCity == null) {
       _showError('Lütfen şehrinizi seçin.');
@@ -250,6 +275,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             Text(_verifiedPhoneNumber ?? '', style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold)),
                           ],
                         ),
+                      ),
+                      IconButton(
+                        onPressed: _removePhoneNumber,
+                        icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 20),
+                        tooltip: 'Numarayı Kaldır',
                       ),
                     ],
                   ),

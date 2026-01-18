@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final firestoreService = FirestoreService();
     
     return Scaffold(
-      backgroundColor: Colors.black, // Luxury Dark Background
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           children: [
@@ -63,25 +63,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     return matchesSearch && matchesCategory && matchesCity;
                   }).toList();
 
-                  final boostedVehicles = filtered.where((v) => v.isBoosted).toList();
-                  final normalVehicles = filtered.where((v) => !v.isBoosted).toList();
-
                   return CustomScrollView(
                     physics: const BouncingScrollPhysics(),
                     slivers: [
-                      if (boostedVehicles.isNotEmpty && _searchQuery.isEmpty)
-                        SliverToBoxAdapter(
-                          child: FadeInDown(
-                            child: _buildFeaturedSection(boostedVehicles),
-                          ),
-                        ),
-
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
                         sliver: SliverToBoxAdapter(
                           child: Text(
-                            boostedVehicles.isNotEmpty ? 'Diğer İlanlar' : 'Tüm İlanlar', 
-                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: -0.5)
+                            'TÜM İLANLAR', 
+                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 2)
                           ),
                         ),
                       ),
@@ -93,9 +83,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           delegate: SliverChildBuilderDelegate(
                             (context, index) => Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                              child: VehicleCard(vehicle: normalVehicles[index]),
+                              child: FadeInUp(
+                                duration: const Duration(milliseconds: 400),
+                                delay: Duration(milliseconds: index * 100),
+                                child: VehicleCard(vehicle: filtered[index]),
+                              ),
                             ),
-                            childCount: normalVehicles.length,
+                            childCount: filtered.length,
                           ),
                         ),
                       const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -229,35 +223,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildFeaturedSection(List<Vehicle> boostedVehicles) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Row(
-            children: [
-              Icon(Icons.star_rounded, color: Colors.amber, size: 18),
-              SizedBox(width: 8),
-              Text('ÖNERİLENLER', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11)),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 220,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: boostedVehicles.length,
-            itemBuilder: (context, index) {
-              return _FeaturedCard(vehicle: boostedVehicles[index]);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   void _showSortPicker() {
     showModalBottomSheet(
       context: context,
@@ -307,63 +272,4 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildLoadingList() => Shimmer.fromColors(baseColor: Colors.white.withOpacity(0.05), highlightColor: Colors.white.withOpacity(0.1), child: ListView.builder(padding: const EdgeInsets.symmetric(horizontal: 20), itemCount: 3, itemBuilder: (context, index) => Container(height: 220, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)))));
   Widget _buildEmptyState() => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.search_off_rounded, size: 80, color: Colors.white.withOpacity(0.05)), const SizedBox(height: 16), const Text('Aradığın araç bulunamadı.', style: TextStyle(color: Colors.white24, fontSize: 16))]));
-}
-
-class _FeaturedCard extends StatelessWidget {
-  final Vehicle vehicle;
-  const _FeaturedCard({required this.vehicle});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => VehicleDetailScreen(vehicle: vehicle))),
-      child: Container(
-        width: 300,
-        margin: const EdgeInsets.only(right: 16, left: 4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
-          image: DecorationImage(
-            image: NetworkImage(vehicle.images.isNotEmpty ? vehicle.images[0] : 'https://via.placeholder.com/300'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.9)]),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(10)),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.bolt, size: 14, color: Colors.black),
-                    SizedBox(width: 4),
-                    Text('ÖNERİLEN', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(vehicle.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5), maxLines: 1, overflow: TextOverflow.ellipsis),
-              Row(
-                children: [
-                  Text('₺${vehicle.price.toInt()}', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                  const Text(' / gün', style: TextStyle(color: Colors.white24, fontSize: 12)),
-                  const Spacer(),
-                  const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.white24),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

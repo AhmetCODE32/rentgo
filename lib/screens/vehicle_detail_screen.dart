@@ -12,6 +12,8 @@ import 'package:share_plus/share_plus.dart';
 import '../models/vehicle.dart';
 import '../models/review.dart';
 
+final Set<String> _viewedVehicles = {};
+
 class VehicleDetailScreen extends StatefulWidget {
   final Vehicle vehicle;
 
@@ -28,9 +30,12 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FirestoreService>().incrementVehicleViews(widget.vehicle.id!);
-    });
+    if (!_viewedVehicles.contains(widget.vehicle.id)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<FirestoreService>().incrementVehicleViews(widget.vehicle.id!);
+        _viewedVehicles.add(widget.vehicle.id!);
+      });
+    }
 
     _pageController.addListener(() {
       if(_pageController.hasClients) {
@@ -61,13 +66,6 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
           const SnackBar(content: Text('Paylaşım penceresi açılamadı.'), backgroundColor: Colors.redAccent),
         );
       }
-    }
-  }
-
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
     }
   }
 
@@ -185,6 +183,19 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
+                  
+                  Row(
+                    children: [
+                      const Icon(Icons.visibility_rounded, size: 14, color: Colors.white24),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${widget.vehicle.views} görüntülenme',
+                        style: const TextStyle(color: Colors.white24, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(8)),
@@ -233,7 +244,6 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
       stream: service.getUserProfileStream(widget.vehicle.userId),
       builder: (context, snapshot) {
         final userData = snapshot.data?.data() ?? {};
-        final bool isPremium = userData['isPremium'] ?? false;
         final String? photoURL = userData['photoURL'];
         final String displayName = userData['displayName'] ?? widget.vehicle.sellerName;
         
@@ -245,7 +255,7 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF0A0A0A), 
               borderRadius: BorderRadius.circular(24), 
-              border: Border.all(color: isPremium ? Colors.amber.withOpacity(0.3) : Colors.white.withOpacity(0.05)),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
             ),
             child: Row(
               children: [
@@ -262,9 +272,9 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
                     children: [
                       Text(displayName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.white)),
                       const SizedBox(height: 2),
-                      Text(
-                        isPremium ? 'Vroomy Pro Satıcı' : 'Doğrulanmış Üye', 
-                        style: TextStyle(color: isPremium ? Colors.amber : Colors.white24, fontSize: 12, fontWeight: FontWeight.bold),
+                      const Text(
+                        'Doğrulanmış Üye', 
+                        style: TextStyle(color: Colors.white24, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -290,16 +300,14 @@ class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
       child: Row(
         children: [
           Expanded(
-            child: OutlinedButton(
-              onPressed: _startChat,
-              child: const Text('MESAJ GÖNDER', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
             child: ElevatedButton(
-              onPressed: () => _makePhoneCall(widget.vehicle.phoneNumber),
-              child: const Text('HEMEN ARA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+              onPressed: _startChat,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              ),
+              child: const Text('MESAJ GÖNDER', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
             ),
           ),
         ],
